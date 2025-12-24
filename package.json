@@ -1,0 +1,23 @@
+{
+  "name": "wzhgamedev",
+  "version": "1.0.0",
+  "description": "<img alt=\"theme version\" src=\"https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FD-Sketon%2Fhugo-theme-reimu%2Frefs%2Fheads%2Fmain%2Fpackage.json&query=%24.version&label=theme\">",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "algolia": "atomic-algolia"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cnwenzhihong/WzhGameDev.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/cnwenzhihong/WzhGameDev/issues"
+  },
+  "homepage": "https://github.com/cnwenzhihong/WzhGameDev#readme",
+  "dependencies": {
+    "atomic-algolia": "^0.3.19"
+  }
+}

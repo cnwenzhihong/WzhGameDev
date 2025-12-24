@@ -104,10 +104,10 @@ footer:
     mask: true # whether to use the images as a mask
 
 # Sidebar
-sidebar: right
+sidebar: left
 
 social:
-  # email: mailto:xxx@gmail.com
+  email: mailto:cnwenzhihong@gmail.com
   # github: https://github.com/yourname
   # google: https://plus.google.com/yourname
   # twitter: https://twitter.com/yourname
@@ -120,7 +120,7 @@ social:
   # flickr: https://www.flickr.com/photos/yourname
   # dribbble: https://dribbble.com/yourname
   # behance: https://www.behance.net/yourname
-  # bilibili: https://space.bilibili.com/yourname
+  bilibili: https://space.bilibili.com/35312868
   # weibo: https://weibo.com/yourname
   # zhihu: https://www.zhihu.com/people/yourname
   # reddit: https://www.reddit.com/user/yourname
@@ -305,8 +305,8 @@ math:
 comment:
   # comment system title
   title:
-    en: Continuously updated!
-    zh-CN: 持续更新中！
+    en: Leave a comment
+    zh-CN: 说些什么吧！
     pt-BR: Deixe um comentário
   default: waline # default comment system, when you enable multiple comment systems
 
@@ -393,10 +393,10 @@ disqus:
 ########################################
 
 algolia_search:
-  enable: false
-  appID:
-  apiKey:
-  indexName:
+  enable: true
+  appID: Y8C6JKXKKR
+  apiKey: 30fdacdc4947fb8d8faed68e16f048a0
+  indexName: index
   hits:
     per_page: 10
 
@@ -598,7 +598,7 @@ service_worker:
 # Experimental
 live2d:
   enable: false
-  position: left # left or right
+  position: right # left or right
 
 # Experimental
 live2d_widgets:
