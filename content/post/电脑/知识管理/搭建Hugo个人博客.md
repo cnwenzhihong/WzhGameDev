@@ -1,13 +1,13 @@
 ---
 created: 2025-12-24T03:55:07+08:00
-modified: 2025-12-24T19:28:23+08:00
+modified: 2025-12-25T01:31:36+08:00
 feature: thumbnails/external/70dfd27858ca3c39732765125e7130fc.png
 thumbnail: thumbnails/resized/c65b86c47d386b5a9f29e79138b3cff4_b89e22fb.jpg
 tags:
   - blog
 title: 搭建Hugo个人博客
 date: 2025-12-23T19:55:06.587Z
-lastmod: 2025-12-24T12:40:02.382Z
+lastmod: 2025-12-24T17:41:05.235Z
 ---
 # 本地windows部署
 
@@ -88,3 +88,70 @@ hugo server
 
 [hugo publish](https://github.com/kirito41dd/obsidian-hugo-publish)\
 ![](https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/20251224161920407.png)
+
+# Github建站
+
+新建一个空仓库，将public文件夹发送上去，要修改的文件：hugo.toml
+
+```
+baseURL = 'https://cnwenzhihong.github.io/WzhGameDevPublish'
+cnwenzhihong: 用户名
+WzhGameDevPublish: 仓库名
+```
+
+仓库设置→Pages→ 设置分支为main→根目录→保存\
+![](https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/20251225011209160.png)\
+过30s可以看到效果
+
+## 自动部署
+
+创建文件 .github/workflows/hugo\_auto.yaml\
+拷贝该链接的任务文件：<https://github.com/peaceiris/actions-hugo>
+
+```yaml
+name: GitHub Pages
+
+on:
+  push:
+    branches:
+      - main  # Set a branch to deploy
+  pull_request:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true  # Fetch Hugo themes (true OR recursive)
+          fetch-depth: 0    # Fetch all history for .GitInfo and .Lastmod
+
+      - name: Setup Hugo
+        uses: peaceiris/actions-hugo@v3
+        with:
+          hugo-version: 'latest'
+          extended: true
+
+      - name: Build Web
+        run: hugo -D
+        #run: hugo --minify
+
+      - name: Deploy Web
+        uses: peaceiris/actions-gh-pages@v4
+        #if: github.ref == 'refs/heads/main'
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          EXTERNAL REPOSITORY: cnwenzhihong/WzhGameDevPublish
+          PUBLISH_BRANCH: main
+          PUBLISH_DIR: ./public
+          commit_message: auto deploy
+```
+
+### 参数
+
+github\_token: 在仓库Secrets and variables中创建一个仓库变量，名为TOKEN，存储github的Token\
+![](https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/20251225013751242.png)\
+EXTERNAL REPOSITORY: 用户名/静态页面仓库名
