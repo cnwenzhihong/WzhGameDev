@@ -26,10 +26,10 @@ monthFormat: "2006-01"
 dateFormat: "2006-01-02"
 timeFormat: "2006-01-02 15:04:05"
 
-author: D-Sketon
-email: xxx@example.com
-description: "少女祈祷中..."
-subtitle: "少女祈祷中..."
+author: 温志洪
+email: cnwenzhihong@gmail.com
+description: "FPS游戏"
+subtitle: ""
 
 banner: "images/banner.webp"
 # You can also write it in the form of the following url
@@ -37,7 +37,7 @@ banner: "images/banner.webp"
 
 # If you want to use the srcset attribute, please enable it
 banner_srcset:
-  enable: false
+  enable: true
   srcset:
     - src: "images/banner-600w.webp"
       media: "(max-width: 479px)"
@@ -46,7 +46,7 @@ banner_srcset:
     - src: "images/banner.webp"
       media: "(min-width: 800px)"
 
-avatar: "avatar.webp"
+avatar: "UELogo.png"
 
 # Control the display of the post cover
 # If not set, the banner image will be displayed by default
@@ -94,7 +94,7 @@ copyright:
 #   All website licensed under <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank">CC BY 4.0</a></div>
 
 footer:
-  since: 2020 # 2020-current year
+  since: 2025 # 2020-current year
   powered: true
   count: true
   busuanzi: true
@@ -136,7 +136,7 @@ social:
 widgets:
   - category
   - tag
-  - tagcloud
+  # - tagcloud
   - recent_posts
 
 # Widget behavior
@@ -148,7 +148,7 @@ tagcloud_limits: 20
 # Archive behavior
 only_show_capsule_in_index: false # If you have hugo amounts of tags and categories, you can set this to true to only show the capsule in the index page for better performance
 
-show_update_time: false # If you want to show the update time, please set this to true
+show_update_time: true # If you want to show the update time, please set this to true
 
 # Summary content
 summary:
@@ -181,7 +181,7 @@ sort_order:
   home: default # controlled by weight
 
 layout:
-  max_width: 1350px # the max width of the main content area
+  max_width: 1650px # the max width of the main content area
 
 ########################################
 # CSS
@@ -238,7 +238,7 @@ dark_mode:
   # true means that the dark mode is enabled by default
   # false means that the dark mode is disabled by default
   # auto means that the dark mode is automatically switched according to the system settings
-  enable: auto # true | false | auto
+  enable: false # true | false | auto
 
 ########################################
 # Analytics
@@ -254,20 +254,20 @@ clarity: false
 
 # mermaid url https://github.com/mermaid-js/mermaid
 mermaid:
-  zoom: false # whether to enable zoom for mermaid diagrams
+  zoom: true # whether to enable zoom for mermaid diagrams
 
 code_block:
   # whether to expand the code block by default
   # true means expand all code blocks by default
   # false means collapse all code blocks by default
   # number means collapse the code block by default when the number of lines exceeds the specified value
-  expand: true
+  expand: 4
 
 math:
   katex:
     enable: true
   mathjax:
-    enable: false
+    enable: true
     options: # see https://docs.mathjax.org/en/latest/web/configuration.html
     # we need to put the configuration in an array, because hugo will automatically convert the key to lowercase
       [
@@ -305,10 +305,8 @@ math:
 comment:
   # comment system title
   title:
-    en: Leave a comment
-    zh-CN: 说些什么吧！
-    zh-TW: 說些什麼吧！
-    ja: コメントを残す
+    en: Continuously updated!
+    zh-CN: 持续更新中！
     pt-BR: Deixe um comentário
   default: waline # default comment system, when you enable multiple comment systems
 
@@ -410,7 +408,6 @@ preloader:
   enable: true
   text: 
     zh-CN: 少女祈祷中...
-    zh-TW: 少女祈禱中...
     en: Loading...
     ja: 少女祈祷中...
     pt-BR: Carregando...
@@ -566,11 +563,11 @@ share:
 
 # show categories card on home page
 home_categories:
-  enable: false
+  enable: true
   content:
     - categories: # string (single-layer category) or array (multi-layer category)
       cover: # empty means random cover
-    - categories:
+    - categories: 
       cover:
 
 ########################################
@@ -584,7 +581,7 @@ pjax:
 # Experimental
 # https://github.com/GoogleChromeLabs/quicklink
 quicklink:
-  enable: false
+  enable: true
   # The `requestIdleCallback` timeout, in milliseconds.
   timeout: 3000
   # Whether or not the URLs within the options.el container should be treated as high priority.
@@ -661,7 +658,7 @@ material_theme:
   # more information: https://github.com/2061360308/material-theme
   # notice: when you enable this feature, all the covers will be automatically added "crossorigin" attribute to support the dynamic color scheme
   # so make sure your custom covers will not be blocked by the browser's CORS policy
-  enable: false # enable material_theme to generate dynamic color schemes based on the banner image
+  enable: true # enable material_theme to generate dynamic color schemes based on the banner image
 
 internal_theme:
   light:
