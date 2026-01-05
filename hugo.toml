@@ -34,4 +34,3 @@ baseName = "algolia"
 isPlainText = true
 mediaType = "application/json"
 notAlternative = true
-

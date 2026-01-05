@@ -1,0 +1,22 @@
+.callout {
+  border-left: 4px solid var(--callout-color);
+  background: var(--callout-bg);
+  padding: 0.75em 1em;
+  margin: 1em 0;
+  border-radius: 6px;
+}
+
+.callout-title {
+  font-weight: 600;
+  margin-bottom: 0.4em;
+}
+
+.callout-note {
+  --callout-color: #4da3ff;
+  --callout-bg: rgba(77, 163, 255, 0.1);
+}
+
+.callout-warning {
+  --callout-color: #f0ad4e;
+  --callout-bg: rgba(240, 173, 78, 0.15);
+}

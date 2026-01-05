@@ -1,6 +1,6 @@
 ---
 created: 2025-11-22T21:19:31+08:00
-modified: 2025-12-24T20:38:46+08:00
+modified: 2026-01-05T20:03:10+08:00
 feature: thumbnails/external/e6edcd6b8422c78b3b4b64b340d7848d.png
 thumbnail: thumbnails/resized/37f015824f567075ec9bf12a78536396_b89e22fb.jpg
 tags:
@@ -12,18 +12,31 @@ dg-home: "true"
 cssclasses:
   - list-cards
 title: FPS中的武器摇晃
+slug: fpszhong-de-wu-qi-yao-huang
+cover: ""
+categories: []
+halo:
+  site: http://192.168.0.107:28090
+  name: 8a6707a9-8c42-4ee8-a2e0-d247183fe9c3
+  publish: false
 date: 2025-11-22T13:19:29.880Z
-lastmod: 2025-12-24T12:38:47.548Z
+lastmod: 2026-01-05T12:04:12.070Z
 ---
-# 旋转摇晃Weapon Sway
+# 1. 旋转摇晃Weapon Sway
 
-## 代码实现
+> \[!note]- 资料\
+> [CraftingGunFeel.pdf](https://his.diva-portal.org/smash/get/diva2%3A1971715/FULLTEXT01.pdf) 对武器程序化动画、枪械感觉做出了大量实践指导，极具参考价值，不过较为零散，需要自行整理\
+> [使用控制绑定制作武器偏移效果](https://www.bilibili.com/video/BV1C6BEBHEXG):使用control rig实现相同效果的优秀示例
+
+## 1.1. 代码实现
 
 我们可以将其分为：获取转动输入→计算偏移量→表现三个步骤
 
 > 先获取用户转动差值，做各种处理后，用于表现效果
 
-### 一、处理输入量
+http://125.208.22.164/#/convert?card=D2F9B25D74AF8ACA
+
+### 1.1.1. 一、处理输入量
 
 > 计算转动量/输入量的速度，用于后续处理
 
@@ -90,11 +103,10 @@ PrevRotSpeedFiltered.Y = RotSpeedFiltered.Y;
 
 > 平滑变化速率较大的情况
 
-如果想平滑输入，可以对角速度进行低通滤波，会看起来更舒缓，但变化较慢。\
 适用场景：
 
 * 大幅度摆动时，防止短时间参数跳变引起Target跳变
-* Interp平滑曲线，几乎必备
+* Interp 平滑输入，会看起来更舒缓，但变化减慢。
 
 > \[!example]- 代码
 >
@@ -141,8 +153,10 @@ FVector2D rotSpeedNormalize = FVector2D(FMath::Clamp(tmp_RotSpeed.X, -1, 1), FMa
 
 ##### 非线性映射
 
-小幅度转动时提供更小的视觉变化，大幅度转动时再提升效果往往能带来更好的效果。指数函数能较低成本地实现。\
-![](https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/20251221161521741.png)
+需求1-更容易瞄准：小幅度转动时提供更小的视觉变化，大幅度转动时再提升。(> 0)\
+需求2-更灵敏：小幅度转动时(刚动鼠标即可响应)便能有可见的摆动。(< 0)\
+指数函数都能较低成本地实现，也可以改为曲线精准调节\
+![](https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/20251226065943488.png)
 
 > \[!example]- 示例
 >
@@ -153,13 +167,25 @@ FVector2D rotSpeedNormalize = FVector2D(FMath::Clamp(tmp_RotSpeed.X, -1, 1), FMa
 > float ny = NonLinear(rotSpeedNorm.Y);
 > ```
 
-### 二、计算偏移量
+### 1.1.2. 二、计算偏移量
 
 我们需要得到WeaponSway的关键结果：`SwayOffset`和`SwayRot`
 
-#### 2.1 计算Sway Target
+#### 2.1 方案一：计算Sway Target
 
 通过上面获取的输入量(偏移/速度/加速度)，处理得到想要的偏移和旋转目标值。
+
+> \[!important]+\
+> [3D 软件坐标系类型与转换](https://zhuanlan.zhihu.com/p/641172693)\
+> 鼠标输入与UE坐标轴映射关系——以UE为准：
+>
+> * X → Y
+> * Y → Z\
+>   ![](https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/20251226164442511.png)\
+>   欧拉角也采用UE标准\
+>   ![](https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/20251226170200899.png)\
+>   武器常见的坐标系\
+>   ![](https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/20251226182802678.png)
 
 > \[!example]- 代码
 >
@@ -175,8 +201,9 @@ FVector2D rotSpeedNormalize = FVector2D(FMath::Clamp(tmp_RotSpeed.X, -1, 1), FMa
 > swayRotTarget.Yaw=ControllerRotSpeed_Rate.X * SwayRotMulti.Yaw;
 > ```
 
-##### 左右旋转增加值
+##### Tips: 左右旋转时加上Pitch值
 
+> \[!tip] 左旋转时，Pitch向下压是一种优秀的效果\ <video src="https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/WeaponSway_PitchAdd.mp4" controls></video>\
 > 理论上我们应将左右、上下旋转做独立的Vector和Rotator映射，而不是直接指定轴。但偷了懒，且目前的参数够用
 
 上文代码中鼠标X移动控制Yaw和Roll旋转，但部分游戏中添加Pitch旋转能进一步增强效果，对其进行补充
@@ -193,7 +220,7 @@ FVector2D rotSpeedNormalize = FVector2D(FMath::Clamp(tmp_RotSpeed.X, -1, 1), FMa
 > }
 > ```
 
-#### 2.2 对Sway Target插值
+#### 2.2 方案一：对Sway Target插值
 
 > \[!important] 武器摇晃手感的核心
 
@@ -297,123 +324,120 @@ FVector2D rotSpeedNormalize = FVector2D(FMath::Clamp(tmp_RotSpeed.X, -1, 1), FMa
 > [Damped Springsa原理与实现](https://www.ryanjuckett.com/damped-springs/)\
 > [UE4中的阻尼弹簧平滑](https://zhuanlan.zhihu.com/p/412291354)
 
-### 三、应用参数
+#### 方案一：SpringInterp介绍
 
-> \[!example]- 上文完整代码：
+SpringInterp使当前位置朝目标平滑过渡，并能表现出惯性、超调（如果阻尼不足）或快速回弹（如果阻尼大）。\
+SpringInterp比简单的Interp更接近物理，能自然模拟质量、刚度、阻尼的不同组合，产生丰富的“尾巴/回弹”效果。
+
+局限性：\
+Weapon Sway 每一帧都在更新Target，这会导致：
+
+* Target 不断变化
+* SpringState 一直被重写
+* 内部 velocity 失真
+
+用于旋转的弹簧插值\
+社区推荐用自己的弹簧求解[Spring-based Animation and Quaternions](https://toqoz.fyi/springs.html?utm_source=chatgpt.com)
+
+#### 2.3 方案二：自定义简易弹簧插值
+
+在SpringInterp中，输入和回正是由函数自行计算的，我们无法精确控制。\
+在做并不需要那么有弹性的系统时，完全可以自行用一套力反馈机制，让玩家自己去推Weapon
+
+> 优点：\
+> ✅ 有惯性 ✅ 速度过渡更自然 ✅ 有回正 ✅ 有重量\
+> 缺点：\
+> 无法准确预估Target
+
+**推力**\
+通过上面获取的输入量(偏移/速度/加速度)，得到一个持续朝运动方向推的力，而不是一个目标点。
+
+> \[!note]- 示例
 >
-> ```cpp
-> void UPawnComp_FPSRotWeaponSway::TickWeaponSway(float DeltaSeconds, const FRotator& ControlRotation, ESwayState NewState)  
-> {  
->     if (DeltaSeconds <= 0.f) return;  
->     LocalTime += DeltaSeconds;  
->     // State transitions  
->     if (NewState != CurrentState)  
->     {       CurrentState = NewState;  
->        StateStartTime = LocalTime;  
->     }  
->   
->     FSwayParams const& Params = GetParamsForState(CurrentState);  
->   
->   
->     // 1) delta rot  
->     FRotator deltaRot = UKismetMathLibrary::NormalizedDeltaRotator(ControlRotation, LastControlRot);  
->     LastControlRot = ControlRotation;  
->   
->   
->     // 2) rot speed (deg/s) and smoothing  
->     FVector2D rotSpeedFrame(deltaRot.Yaw / DeltaSeconds, deltaRot.Pitch / DeltaSeconds);  
->     // low-pass smoothing  
->     if (bUseInputLowpass)  
->     {       float alpha = FMath::Clamp(DeltaSeconds * 10.f, 0.f, 1.f);  
->        RotSpeedFiltered.X = FMath::Lerp(RotSpeedFiltered.X, rotSpeedFrame.X, alpha);  
->        RotSpeedFiltered.Y = FMath::Lerp(RotSpeedFiltered.Y, rotSpeedFrame.Y, alpha);  
->     }    else  
->     {  
->        RotSpeedFiltered.X=rotSpeedFrame.X;  
->        RotSpeedFiltered.Y=rotSpeedFrame.Y;  
->     }    // accel  
->     FVector2D rotAccel((RotSpeedFiltered.X - PrevRotSpeedFiltered.X) / DeltaSeconds,  
->                        (RotSpeedFiltered.Y - PrevRotSpeedFiltered.Y) / DeltaSeconds);  
->     PrevRotSpeedFiltered.X = RotSpeedFiltered.X;  
->     PrevRotSpeedFiltered.Y = RotSpeedFiltered.Y;  
->   
->   
->     // 3) normalize  
->     FVector2D rotSpeedNorm(RotSpeedFiltered.X / Params.FiducialRotSpeed, RotSpeedFiltered.Y / Params.FiducialRotSpeed);  
->     rotSpeedNorm.X = FMath::Clamp(rotSpeedNorm.X, -1.f, 1.f);  
->     rotSpeedNorm.Y = FMath::Clamp(rotSpeedNorm.Y, -1.f, 1.f);  
->   
->   
->     // 4) nonlinear mapping (emphasize higher speeds)  
->     //改为曲线，可以手动选择曲线  
->     auto NonLinear = [](float v) { return FMath::Sign(v) * FMath::Pow(FMath::Abs(v), 1.15f); };  
->     float nx = NonLinear(rotSpeedNorm.X);  
->     float ny = NonLinear(rotSpeedNorm.Y);  
->           
->       
-> // 5) compute translation target  
->     FVector swayOffsetTarget = FVector(  
->        nx * Params.SwayOffsetMulti.X * -1.f,  
->        nx * Params.SwayOffsetMulti.Y,  
->        ny * Params.SwayOffsetMulti.Z  
->     );  
->   
->     // 6) compute rotation target (separate)  
->     FRotator swayRotTarget = FRotator(  
->        nx * Params.SwayRotMulti.Pitch,  
->        nx * Params.SwayRotMulti.Yaw,  
->        ny * Params.SwayRotMulti.Roll * -1.f  
->     );  
->
->     // 9) position spring interp    SwayOffset = UKismetMathLibrary::VectorSpringInterp(SwayOffset, swayOffsetTarget, PosSpringState,  
->                                                         Params.Pos_Stiffness, Params.Pos_Damping, DeltaSeconds,  
->                                                         Params.Pos_Mass,Params.TargetVelocityAmount);  
->     // clamp  
->     if (SwayOffset.Size() > Params.MaxOffset)  
->     {       SwayOffset = SwayOffset.GetSafeNormal() * Params.MaxOffset;  
->     }  
->     // 10) rotation spring interp  
->     SwayRot = RotatorSpringInterp(SwayRot, swayRotTarget, RotSpringState, Params.Rot_Stiffness, Params.Rot_Damping,  
->                                   DeltaSeconds, Params.Rot_Mass,Params.MaxRot);  
-> }
->
-> FRotator UPawnComp_FPSRotWeaponSway::RotatorSpringInterp(const FRotator& Current, const FRotator& Target,  
->                                                          FRotatorSpringState& State, float Stiffness, float Damping,  
->                                                          float DeltaTime, float Mass,FRotator MaxRot)  
-> {  
->     DeltaTime=DeltaTime>RotMaxDeltaSeconds?RotMaxDeltaSeconds:DeltaTime;  
->     // Convert to vector for simple integration (Pitch, Yaw, Roll)  
->     FVector cur(Current.Pitch, Current.Yaw, Current.Roll);  
->     FVector targ(Target.Pitch, Target.Yaw, Target.Roll);  
->   
->   
->     // Semi-implicit Euler integration  
->     FVector acc = (targ - cur) * Stiffness - State.Velocity * Damping;  
->     acc = acc / FMath::Max(Mass, KINDA_SMALL_NUMBER);  
->     State.Velocity += acc * DeltaTime;  
->     FVector next = cur + State.Velocity * DeltaTime;  
->   
->   
->     FRotator nextRot = FRotator(next.X, next.Y, next.Z);  
->     if (!MaxRot.IsZero())  
->     {       nextRot.Pitch = FMath::Clamp(nextRot.Pitch, -MaxRot.Pitch, MaxRot.Pitch);  
->        nextRot.Yaw = FMath::Clamp(nextRot.Yaw, -MaxRot.Yaw, MaxRot.Yaw);  
->        nextRot.Roll = FMath::Clamp(nextRot.Roll, -MaxRot.Roll, MaxRot.Roll);  
->     }    return nextRot;  
-> }
+> ```CPP
+> WeaponAngVel.Pitch += -AngularSpeed.Y * SwayRotMulti.Pitch;
+> WeaponAngVel.Yaw   += -AngularSpeed.X * SwayRotMulti.Yaw;
+> WeaponAngVel.Roll  += -AngularSpeed.X * SwayRotMulti.Roll;
 > ```
 
-#### 基本使用
+很明显，如果不加以限制，速度(WeaponAngVel)会不断上升\
+![](https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/20260104133021697.png)
 
-在Tick中使用\
-![](https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/20251218041755810.png)
+**回正力**\
+枪自己想回到中间（回正力），越远力越大\
+是否有输入：
 
-将计算出的参数用于修改武器IK骨骼即可\
-![](https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/20251218035612026.png)
+* 还在甩鼠标  → 枪 **没那么急着回正**
+* 停下来 → 枪 **更积极回正**
 
-#### 拓展
+> \[!note]- 代码
+>
+> ```CPP
+> WeaponAngVel.Pitch += -WeaponRot.Pitch * DeltaSeconds * ForceMulti_HasInput.Pitch * (bHasInput ? 1.f : ForceNoInputRate.Pitch);
+> ```
 
-##### 改变旋转中心
+**强制回正**\
+场景：如果玩家持续匀速转动，画面很容易保持静止\
+可以用噪声缓解，也可以根据输入时间进行缓慢回正，这符合现实直觉
+
+> \[!exaple]- 代码
+>
+> ```CPP
+> if (bHasInput&&Straighten_TotalTime!=0)  
+> {  
+>     WeaponRot *= FMath::Max(FMath::Pow((Straighten_TotalTime - InputTime) / Straighten_TotalTime, Straighten_NoneLinear), Straighten_MinValue);  
+> }
+> ```
+>
+> 假设：\
+> Straighten\_TotalTime=2 Straighten\_NoneLinear=0.3 Straighten\_MinValue=0.3\
+> 如图：\
+> ![](https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/20260105191120670.png)
+
+**阻尼**\
+让枪慢慢停下来， $f(x)=e^x$  x<0时，f(x)<1
+
+> \[!note]- 代码
+>
+> ```CPP
+>  WeaponAngVel *= FMath::Exp(Damp * DeltaSeconds);
+> ```
+
+#### 2.4 方案二：计算位移
+
+> \[!note]- 代码
+>
+> ```CPP
+> WeaponRot.Pitch += WeaponAngVel.Pitch * DeltaSeconds;
+> WeaponRot.Yaw   += WeaponAngVel.Yaw   * DeltaSeconds;
+> WeaponRot.Roll  += WeaponAngVel.Roll  * DeltaSeconds;
+> ```
+
+### 1.1.3. 后期处理
+
+#### 限幅（MaxOffset / MaxRot）
+
+保护视觉（防止武器飘出画面或产生穿模），并保证在极端输入下效果可控。\
+用户灵敏度、鼠标抖动或跳帧可能造成瞬时超大值，限幅能保护不破坏玩家视觉体验。上述情况都很容易出现
+
+应用：\
+SpringInterp这种调参困难方案时的\
+尽量在运算参数时能预估最大范围，这是最后一道保险。
+
+问题：\
+当达到最大值时速度会突然归0，极为生硬，可以用Noise缓解。\
+也可以在算到最大值时动态降低速度，但属于本末倒置，我们应专注于插值实现更精准的控制，而不是期待粗暴的最大值限制。
+
+> \[!example]- 代码
+>
+> ```cpp
+> if (SwayOffset.Size() > Params.MaxOffset) SwayOffset = SwayOffset.GetSafeNormal() * Params.MaxOffset;  
+> SwayRot.Pitch = FMath::Clamp(SwayRot.Pitch, -Params.MaxRot.Pitch, Params.MaxRot.Pitch);  
+> SwayRot.Yaw = FMath::Clamp(SwayRot.Yaw, -Params.MaxRot.Yaw, Params.MaxRot.Yaw);  
+> SwayRot.Roll = FMath::Clamp(SwayRot.Roll, -Params.MaxRot.Roll, Params.MaxRot.Roll);
+> ```
+
+#### 改变旋转中心
 
 有的文章中提到，Yaw轴旋转可以设置为绕枪托旋转效果会更好\
 下图以枪口为轴枢点更方便理解：\
@@ -476,583 +500,328 @@ FVector2D rotSpeedNormalize = FVector2D(FMath::Clamp(tmp_RotSpeed.X, -1, 1), FMa
 > 枪托为中心(Pivot=(0,-5,0)) <video src="https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/2025-12-18%2005-16-05.mp4" controls></video>\
 > 枪头为中心(Pivot=(0,10,0))<video src="https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/2025-12-18%2005-19-39.mp4" controls></video>
 
-## 参数配置
+#### 噪声
 
-### 优秀的实现案例
+如果限制最大值，当武器到达最大偏移值时效果便会生硬(不再运动)，此时加入适当的噪声可以大幅度削减该效果，同时增加适当的随机抖动也可以增加一定效果
 
-[【自制COD20 ?】开发日志5-绕任意轴旋转枪身](https://www.bilibili.com/video/BV14UfZYaEQn)：左右旋转采用三轴共转能实现极为大开大合的效果
+暂时在Rot中加入柏林噪声\
+![](https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/20260104233131253.png)
 
-#### 3.1 变化速率
+### 1.1.4. 应用函数
+
+#### 基本使用
+
+在Tick中使用\
+![](https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/20251218041755810.png)
+
+将计算出的参数用于修改武器IK骨骼即可\
+![](https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/20251218035612026.png)
+
+## 1.2. 参数配置
+
+### 1.2.1. 优秀的实现案例
+
+#### UE示例
+
+[【自制COD20 ?】开发日志5-绕任意轴旋转枪身](https://www.bilibili.com/video/BV14UfZYaEQn)：左右旋转采用三轴共转能实现极为大开大合的效果\
+[使用控制绑定制作武器偏移效果](https://www.bilibili.com/video/BV1C6BEBHEXG)：使用`Control Rig`+`Sprint Interp`快速高效实现非常易于控制的武器旋转摇晃
+
+#### 游戏示例
+
+> \[!example]- cod2——Lead，无延迟，沉重、现实且响应及时\
+> [COD2的武器摇摆](https://www.youtube.com/watch?v=kjVSLsz8dCs\&source_ve_path=MTc4NDI0)
+
+> \[!example]- cs2——Lag，少量延迟，停下时立刻追赶上，给人感觉并不拖沓\ <video src="https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/RotSway_CS2.mp4" controls muted autoplay loop></video>
+
+### 1.2.2. 核心思路
+
+#### 第三方资料
+
+> \[!quote]+  [CraftingGunFeel.pdf](https://his.diva-portal.org/smash/get/diva2%3A1971715/FULLTEXT01.pdf) 对武器摇晃的讨论
+>
+> ##### 受访者对武器摇晃的理解
+>
+> 向前移动时武器的Pitch会略微向下旋转，而向后走则相反。\
+> 当角色旋转时，枪械可能跟随相机的旋转滞后，也可能领先。在旋转时，如果领先，武器可能向旋转方向滚动；如果滞后，则可能向相反方向滚动。\
+> Cody进一步描述了他对晃动的方法：玩家旋转时武器滞后，然后过冲，最后稳定下来。\
+> 在移动稳定时使用弹簧插值
+>
+> ##### 过冲和滚动Roll的重要性
+
+当枪的枪托命中肩膀时， 它应该在稳定到预定姿势之前稍微过冲一点。在冲击点之后，应该会有2‑4个快速的小幅度左右滚动，同样遵循过冲原则，然后稳定在中间位置。
+
+> ##### 晃动Sway
+>
+> 从玩家静止时产生的晃动噪音开始。\
+> 每个旋转轴上的两层柏林噪声形式的噪声由玩家的生命值和当前武器的控制等级驱动。武器的控制等级。这些元素影响静止晃动的振幅和频率，其中控制性较差的武器晃动振幅更大但频率更低。
+>
+> 其他类型的晃动，分别由玩家的移动和旋转引起，均由简化的物理驱动驱动，模拟弹簧阻尼器以实现自然的晃动和稳定感。\
+> Cody使用弹簧插值来处理武器移动后的回弹和稳定。
+>
+> 重要的是，Albie的程序化系统允许开发者指定武器在每个轴上操纵的难易程度。Albie指出这是一个强大的特性，因为不同的武器具有不同的重量和质心，并且不同轴上的移动应该以不同方式工作。\
+> 例如，武器在偏航轴(Yaw)上旋转时应具有更多阻力，而在滚转轴上的旋转应具有较少阻力、更高频率和更低惯性。武器应更倾向于在滚转轴(Roll)上旋转而非其他轴旋转的想法反复出现，因为Cody、 Anders和Milton都提到利用滚转来实现武器动画的微妙自然移动感。\
+> 武器通常在偏航轴(Yaw)上不能运动太多，如果你必须让武器产生 Yaw 摆动，它必须绕枪托（buttstock）旋转，而不是绕枪的中心点或手部位置。\
+> pitch / roll 也可以部分受这里影响（取决于你想要的风格）
+>
+> > \[!question]- 为什么要这么做：
+> >
+> > ### ◆ 枪在现实中怎么转？
+> >
+> > 当玩家身体左右摇动或做非常轻微的 Yaw 旋转时：
+> >
+> > * 枪托贴在肩膀
+> > * 枪托基本是“固定点”，或是偏刚性的支点
+> > * 枪管端（muzzle）会动得最大
+> > * 武器中部次之
+> > * 枪托最小\
+> >   📌 这就是现实中的**杠杆**效果。
+> >
+> > ### ◆ 如果旋转点错了，会出现什么问题？
+> >
+> > 如果你让武器绕 “weapon root” 或 “枪中心” 旋转：
+> >
+> > * 枪会像“漂浮物”一样左右转
+> > * 缺乏重量
+> > * 与肩膀没有机械联系
+> > * 视觉上非常假（很多 indie FPS 都犯这个错）
+> >
+> > ### ◆ 这样做后
+>
+> ✔ 枪口摆动会被放大\
+> ✔ 枪托稳定，不会乱飞\
+> ✔ 枪看起来像“真枪”，有重量、有支撑点\
+> ✔ 手感立即提升（非常明显）
+>
+> 在滚转轴上旋转之所以有效，是因为它在不显著影响瞄准方向的情况下增加了不确定感。然而，这在很大程度上取决于特定武器的枢轴点。虽然长武器通常滚动起来感觉良好，但高的武器则不然，因为枪管和瞄准具之间的距离可能会在玩家瞄准时造成不舒服或夸张动作。对此的解决方案很直接——在瞄准时将高武器的枢轴点向上移动。
+>
+> ##### 视图模型过冲的特性
+>
+> 是SCP: 5K的一个显著特性。\
+> 当玩家转向时，视图模型会超过屏幕中心，并在玩家停止旋转时保持向转向方向偏移。与游戏中的大多数程序化运动相反，这被应用于角色绑定的脊柱。这是为了让旋转发生在网格空间中，意味着它相对于角色的根变换而不是骨骼链中更下方的骨骼。\
+> 视图模型过冲不会减少摄像机移动，而是在玩家输入的基础上为视图模型添加额外的移动，并将该移动限制在屏幕的特定区域内。然后根据诸如玩家是否正在瞄准或他们的武器是否有枪托等因素来缩放此效果的振幅。在瞄准射击时， 有托武器如步枪不会出现过冲，而手枪和无托步枪仍然会出现。\
+> 手枪尤其因为其长度短、重量轻且缺乏枪托， 容易抖动和旋转，这使得对准其瞄准具变得困难。虽然VR以外的游戏不模拟双焦瞄准，也不要求玩家像在现实世界中那样对准瞄准具，但SCP: 5K的过冲系统仍然能让游戏传达无托武器缺乏稳定性的特点。然而，为了确保玩家仍能命中他们瞄准的位置，摄像机在瞄准射击时会微妙地自动对准手枪后方，同时仍允许视图模型离开屏幕中心。实现这一点的数学计算相当复杂，由于时间关系在访谈中未深入探讨。但他确实指出，一些玩家可能不喜欢这个过冲特性，可能是因为它引发了晕动症，或者因为相关玩家习惯于主要基于十字准星来定位自己，这就是为什么他的团队决定允许玩家减少或关闭此特性。
+>
+> ##### 美学考量
+>
+> 如果枪械引导移动，这可能会给玩家一种武器操作者技术娴熟或经验丰富的感觉；而如果武器滞后于摄像机，则可能表明相反的情况。晃动插值的各个方面，例如重新居中所需的时间，可以用来强调武器的尺寸或重量。\
+> 一些可用于传达武器特性（如尺寸和重量）的参数包括视图模型过渡到冲刺动画的速度、切换武器的速度、切换到武器后直到可用的时间以及玩家角色瞄准瞄准具的速度。他还引用了后坐力的强度作为可以传达武器威力的一个因素。
+
+#### Input 有无输入对变化速率的影响
 
 ##### 平滑速率
 
-一般游戏采用方案
+一般游戏采用方案，旋转和停下时都采用同一套参数
 
 ##### 先慢后快
 
-需要又稳重又不让感觉拖沓的环境下(CS)，鼠标停下后立刻加快插值速度，营造确认感。
+适用环境：稳重+不拖沓\
+特点：鼠标停下后立刻加快插值速度，营造确认感。
 
-> \[!note]- 增强方案
+> \[!note]- SprintInterp的方案参考(AI)
 >
 > * CriticalDamping 通常设为 `2 * sqrt(Stiffness * Mass)` 才为临界阻尼，设置不同值，可得到欠阻尼（震荡）或过阻尼（缓慢）效果。建议理解该物理背景。
 > * 可以尝试的参数配置：Stiffness 中等偏高（快速响应但不过火）、CriticalDamping 多数接近 1（轻微震荡但不发狂）、Mass 视武器重量或状态而定（重武器 Mass大→摆动慢）。
-> * 大 Mass +大 Stiffness 可能导致高频震荡或振幅异常。
+> * 大 Mass + 大 Stiffness 可能导致高频震荡或振幅异常。
 > * 每帧确认 deltaSeconds 非常小的情况下数值稳定性，避免弹簧公式爆炸（如果 stiffness or mass 过大且 delta small）。可做最大 delta clamp。
 
 > \[!note] 增强方案\
 > 最好的效果：玩家向右转，武器向左并稍微上/下摆动、同时绕自身轻微旋转
 >
-> * swayOffsetMulti用 **速度曲线（非线性）** 替代：比如用速度^n 或平滑函数（例如 SmoothStep）以便高转速带更强但低转速微弱。
+> * swayOffsetMulti用 **速度曲线（非线性）** 替代：比如用速度^n 或平滑函数（例如 SmoothStep）以便高转速更强但低转速微弱。
 > * 为偏移和旋转分别设计 **不同方向响应**：例如 yaw→横向 + roll，pitch→纵向 + pitch 轻微。
 
-> \[!note]-  拓展建议\
-> **fiducialRotSpeed 可以根据不同模式（走、跑、蹲、瞄准）动态改变**。跑动时武器晃动更强，瞄准时更弱。
+#### Input 非线性映射
 
-### 常见游戏方案
+为了在不改变整体效果(最大摆动不缩水)的前提下，改善小范围摆动的视觉效果\
+采用简单的函数实现：$y=x^n$ ，可以简单分为n>1和n<1\
+n > 1：小角度变化较小，偏向让玩家瞄准\
+n < 1：大角度变化也大，偏向表现效果
 
-从大小来看有超前和追赶两种状态，前者看起来更灵敏，后者看起来更真实\
-从移动方式来看，围绕角色旋转、围绕右手旋转、围绕右手偏移
-
-#### 围绕角色旋转：
-
-出现于很多老游戏中，如虚幻竞技场，一般用Lag就能实现\
-容易实现，视野变化大，一般搭配角色追随摄像机效果，体现沉重感
-
-##### 示例
-
-> \[!example]- cs2\
-> 采用Lag，少量延迟，停下时立刻追赶上，给人感觉并不拖沓\
-> ![](https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/RotSway_CS2.mp4)
-
-> \[!example]- UE示例\
-> https://forums.unrealengine.com/t/weapon-sway-solved\
-> [TFE Game - Rotation Lag/Leading](https://www.youtube.com/watch?v=6OFmhQ55iJo)\
-> 我发现除了旋转滞后/领先之外，如果你同时根据滞后/领先值做一些相对位置偏移，效果会好很多。也就是说，我当前的 UpdateWeaponLoc 函数如下：
->
-> ```cpp
->   void APWNWeapon::UpdateLocRot(FVector newLoc, FRotator newRot, float deltaTime) { FRotator finalRot = newRot; 
->   // Rotation Leading/Lag
->   float lagDiff; finalRot.Pitch = LagWeaponRotation(newRot.Pitch, LastRotation.Pitch, deltaTime, MaxPitchLag, 1, lagDiff); 
->   finalRot.Yaw = LagWeaponRotation(newRot.Yaw, LastRotation.Yaw, deltaTime, MaxYawLag, 0, lagDiff); finalRot.Roll = newRot.Roll; 
->   // Location offset 
->   float locDiff = lagDiff / MaxYawLag; locDiff *= MaxLocLagX; 
->   ArmMesh->SetRelativeLocation(FVector(ArmMeshOffset.X, ArmMeshOffset.Y + locDiff, ArmMeshOffset.Z), false); 
->   // Set our loc 
->   LastRotation = newRot; this->SetActorLocation(newLoc); this->SetActorRotation(finalRot); 
-> ```
-
-![](https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/TFE%20Game%20-%20Rotation%20Lag%E2%A7%B8Leading.mp4)
-
-#### 围绕手/武器旋转
-
-大量游戏和教程采用\
-容易实现，视角变化适中，大都为超前效果，看起来相应很快，应用于双手步枪有非常好的效果。
-
-##### 原则
+#### Target 映射轴的控制
 
 一般左右旋转控制Yaw轴、上下旋转控制Pitch轴、左右移动控制Roll轴，但左右旋转控制Roll在减少视野变化的前提下效果也不错\
-左右超前，上下追赶也许更贴近人的潜意识\
 真实武器摆动里 yaw 幅度比 pitch/roll 小，roll（武器绕镜）更能体现质感。
+
+#### Target 超前(Lead)与滞后(Lag)
+
+前者看起来更灵敏(响应强、感觉更爽快)，后者看起来更真实有惯性\
+左右超前，**上下追赶**更贴近人的潜意识
 
 ##### 示例
 
-超前\
-\[tabs]
+> \[!example]- 超前
+>
+> * UE5 教程1\
+>   https://www.youtube.com/watch?v=rZUfkXaVvX4\
+>   教程中提到，给模型添加的SpringArm的方案效果并不好，因为无法限制他、并且很晃\
+>   ![|350](https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/PixPin_2025-11-26_07-20-24.gif)
+> * UE5 教程2\
+>   https://www.youtube.com/watch?v=YahaZR6Umxo\
+>   ![](https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/PixPin_2025-11-26_07-23-44.gif)
+> * UE5 教程3\
+>   https://www.youtube.com/watch?v=eYsjiw0fXvU\
+>   视频中提到，我们可以反转参数来实现追赶效果。\
+>   ![](https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/PixPin_2025-11-27_01-33-44.gif)
+> * UE 实例1\
+>   https://www.youtube.com/watch?v=cpPOA6yKsoo\
+>   左右移动时采用roll旋转，鼠标X旋转用较小的Yaw，整体效果非常优秀<video src="https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/PixPin_2025-11-27_17-35-54.mp4" controls autoplay loop></video>
 
-* UE5 教程1\
-  https://www.youtube.com/watch?v=rZUfkXaVvX4\
-  教程中提到，给模型添加的SpringArm的方案效果并不好，因为无法限制他、并且很晃\
-  ![|350](https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/PixPin_2025-11-26_07-20-24.gif)
-* UE5 教程2\
-  https://www.youtube.com/watch?v=YahaZR6Umxo\
-  ![](https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/PixPin_2025-11-26_07-23-44.gif)
-* UE5 教程3\
-  https://www.youtube.com/watch?v=eYsjiw0fXvU\
-  视频中提到，我们可以反转参数来实现追赶效果。\
-  ![](https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/PixPin_2025-11-27_01-33-44.gif)
-* UE 实例1\
-  https://www.youtube.com/watch?v=cpPOA6yKsoo\
-  左右移动时采用roll旋转，鼠标X旋转用较小的Yaw，整体效果非常优秀\
-  ![](https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/PixPin_2025-11-27_17-35-54.mp4)
+> \[!example]- 追赶：
+>
+> * UE Example\
+>   [Realistic Weapon Sway In UE5](https://www.youtube.com/watch?v=MMvBRQtjFmQ)\
+>   ![](https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/PixPin_2025-11-27_01-30-43.gif)
 
-追赶：\
-\[tabs]
+#### Target 锚点(Pivot)
 
-* UE Example\
-  [Realistic Weapon Sway In UE5](https://www.youtube.com/watch?v=MMvBRQtjFmQ)\
-  ![](https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/PixPin_2025-11-27_01-30-43.gif)
-*
+常见的锚点有：围绕角色旋转、围绕左右手旋转、围绕右手偏移、围绕枪托旋转Yaw
 
-#### 围绕手/武器偏移
+##### 绕角色旋转：
+
+很多老游戏中，如虚幻竞技场，一般用Camera Lag就能实现，不需要专门计算。\
+优点：容易实现，视野变化大带来较强反馈感，一般搭配追赶效果，体现沉重感。\
+问题：无法精确控制效果、效果单一
+
+> \[!example]- UE社区示例\
+> https://forums.unrealengine.com/t/weapon-sway-solved\
+> [TFE Game - Rotation Lag/Leading](https://www.youtube.com/watch?v=6OFmhQ55iJo)\
+> 除了旋转滞后/领先之外，根据滞后/领先值做一些相对位置偏移，效果会好很多。<video src="https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/TFE%20Game%20-%20Rotation%20Lag%E2%A7%B8Leading.mp4" controls autoplay loop></video>
+>
+> ```cpp
+>   void APWNWeapon::UpdateLocRot(FVector newLoc, FRotator newRot, float deltaTime) { 
+>   FRotator finalRot = newRot; 
+>   // Rotation Leading/Lag
+>   float lagDiff; 
+>   finalRot.Pitch = LagWeaponRotation(newRot.Pitch, LastRotation.Pitch, deltaTime, MaxPitchLag, 1, lagDiff); 
+>   finalRot.Yaw = LagWeaponRotation(newRot.Yaw, LastRotation.Yaw, deltaTime, MaxYawLag, 0, lagDiff); finalRot.Roll = newRot.Roll; 
+>   // Location offset 
+>   float locDiff = lagDiff / MaxYawLag;
+>   locDiff *= MaxLocLagX; 
+>   ArmMesh->SetRelativeLocation(FVector(ArmMeshOffset.X, ArmMeshOffset.Y + locDiff, ArmMeshOffset.Z), false); 
+>   // Set our loc 
+>   LastRotation = newRot;
+>   this->SetActorLocation(newLoc); this->SetActorRotation(finalRot); 
+> ```
+
+##### 围绕手/武器重心旋转
+
+被大量游戏和教程采用\
+优点：容易实现，视角变化适中，大都为超前效果，看起来响应很快，应用于双手步枪有非常好的效果。\
+局限：不适合重心不处于中心的/较重的枪械
+
+##### 围绕手/武器偏移
 
 https://www.youtube.com/watch?v=u9SuIsd7Dlw
 
-##### 示例
+> \[!example]-
+>
+> * 军团要塞2\
+>   [Weapon Sway in Team Fortress 2 Again](https://www.youtube.com/watch?v=4wPAzutIVpc)\
+>   ![](https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/PixPin_2025-11-27_16-40-17.gif)\
+>   [UFPS - Procedural camera & animation system intro (2012)](https://www.youtube.com/watch?v=Hu0v0kTWH7w)
 
-* 军团要塞2\
-  [Weapon Sway in Team Fortress 2 Again](https://www.youtube.com/watch?v=4wPAzutIVpc)\
-  ![](https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/PixPin_2025-11-27_16-40-17.gif)\
-  [UFPS - Procedural camera & animation system intro (2012)](https://www.youtube.com/watch?v=Hu0v0kTWH7w)
-
-#### 围绕手/武器旋转+偏移
+##### 围绕手/武器旋转+偏移
 
 可以得到最符合直觉(不一定表现最强)的质感：玩家向右猛转→武器轻微绕镜顺转+向左偏移
 
-### 工程化
+##### 绕枪托旋转Yaw
 
-#### 武器是“追随”视角还是“超前”视角？
+把绕 Yaw 的旋转枢轴定位在枪托（贴肩处），保证枪托相对稳定，枪口移动最大，符合现实杠杆效果。\
+现实中枪托靠肩为固定支点，绕该点左右偏转时枪口的位移最大；若绕武器根或中心旋转，会让枪显得“漂浮”。
 
-有些游戏武器微微滞后（Lag）给人惯性感觉，有些武器反而“提前”给玩家视觉响应（Lead）以增强 responsiveness。根据游戏风格定。论坛中曾建议“leading”可以感觉更爽快。
+#### Lerp 插值方案
+
+1. Interp：快速响应、效果不错，效果做好需要更多参数，否则会直来直去，很假
+2. Sprint Interp：更有弹性、提供变速运动，让其看起来更生动，但配置复杂，不直观。但确实更适合Weapon Sway
+3. Force & Settle & Damp：简化的Sprint Interp，保留了变速运动，参数更直观、不会很弹
+4. Lerp+sin: 有人用Sin来实现速度变化：[Whats the best way to make gun sway?](https://devforum.roblox.com/t/whats-the-best-way-to-make-gun-sway/284153/2)
+
+#### Post Process 基本方案
+
+**柏林噪声**\
+在限制了最大偏移时能大幅度降低生硬感\
+在正常摆动时也能通过轻微的随机数来提升少量观感
+
+**回弹**
+
+> 并没有实现，但效果非常好
+
+无论采用哪种插值方案，都是专注于摇摆的过程。但玩家如果还需要一个晃动完成的确认感表现，当武器归位时增加一个回弹动画会是一个优秀的方案\
+SprintInterp也能简单实现回弹效果，但表现上比不上专门的回弹动画，其极高的耦合度也让回弹并不能单独被控制\
+如：\
+[SKG Shooter Framework](https://youtu.be/hCvq81uiDHU?si=7ej16nyoKlTL1QIV\&t=64) 实现了极为优质的回弹动画\
+[LowPolyShooterPack](https://www.fab.com/listings/90ba076a-dc9a-4782-9ac8-dc2ed4f06405)：大部分状态切换完成后都会播放回弹动画
+
+对SwayTarget进行delay / ramp-up
+
+> 未实现
+
+引入一个 **启动 delay + 增强曲线**，特别是在进入瞄准 (ADS) 时。这样视觉效果更自然
+
+### 1.2.3. 外部工程思路
 
 #### 运动状态
 
-考虑不同运动状态下的视觉变化：\
-\[timeline]
+考虑不同运动状态下的视觉变化(AI)：
 
 * 行走/跑动时：武器摆动幅度更大，速度更快，可能伴随武器上下小幅“抛物”运动 (bobbing) + sway。
 * 站立/瞄准 (ADS)时：幅度缩小，响应延迟加大，甚至增加“惯性”感觉（武器慢慢跟上视角）。
 * 蹲伏/匍匐：幅度最小，优雅/稳定感强。
 * 跳跃/落地：瞬间武器有冲击位移＋摆动＋转动 →然后恢复。
-* 武器切换、换弹、踢脚、滑行等动作也可以用类似机制增强反馈。\
-  当从跑→瞄或跳→落地，武器参数瞬间变化会感觉突兀。可以做跨状态插值（参数 lerp）或使用 timeline 让变化平滑。
+* 武器切换、换弹、踢脚、滑行等动作也可以用类似机制增强反馈。
+
+> \[!note]- 状态延迟与 Ramp（StateEntryDelay / StateRampTime）\
+> 当从跑→瞄或跳→落地，武器参数瞬间变化会感觉突兀。可以做跨状态插值（参数 lerp）或使用 timeline 让变化平滑。(实测意义不大)
+>
+> ```cpp
+> float stateRamp = ComputeStateRamp(Params);
+> swayOffsetTarget *= stateRamp;  
+> rotTarget = rotTarget * stateRamp;
+> float ComputeStateRamp(const FSwayParams& Params) const  
+> {  
+>     float Elapsed = FMath::Max(0.f, LocalTime - StateStartTime); 
+>     if (Elapsed < Params.StateEntryDelay) return 0.f;  
+>     float AfterDelay = Elapsed - Params.StateEntryDelay;  
+>     if (Params.StateRampTime <= KINDA_SMALL_NUMBER) return 1.f;  
+>     return FMath::Clamp(AfterDelay / Params.StateRampTime, 0.f, 1.f);  
+> }
+> ```
 
 #### 屏幕震动
 
-玩家视角旋转同时可能伴随镜头轻微晃动（camera bob/sway），建议武器摆动与镜头运动 **不同步但联动**。这会增强“手持武器真实”感。
+玩家视角旋转同时可能伴随镜头轻微晃动（camera bob/sway），建议武器摆动与镜头运动 **不同步但联动**。这会增强“手持武器的真实感”。
 
-### 旋转IK\_Gun的Yaw/Pitch
+## 1.3. 插件化
 
-最简单、最容易理解\
-能达到的最好效果：\
-[SKG Shooter Framework](https://www.youtube.com/watch?v=hCvq81uiDHU\&list=PLnHeglBaPYu_BueK4IiXg34u5pGpsDkJj):采用SpringLerp，添加了一个类似LowPolyShooter的回弹效果
+### Obj继承vs DataAsset
 
-### 额外效果
+DataAsset——不需要每次修改后编译\
+可以运行时编辑器实时编辑。修改父类数据后不用重新保存引用的蓝图\
+Obj继承——数据+函数 √\
+可以单独存储函数中的数据、代码逻辑简单清晰、不需要独立Component/Subsystem用于计算。\
+使用和理解没有心智负担
 
-[# SKG Shooter Framework](https://www.youtube.com/watch?v=hCvq81uiDHU\&list=PLnHeglBaPYu_BueK4IiXg34u5pGpsDkJj):添加了一个类似LowPolyShooter的回弹效果\
-[COD2的武器摇摆](https://www.youtube.com/watch?v=kjVSLsz8dCs\&source_ve_path=MTc4NDI0)\
-获取输入量，使用动画Yaw和Pitch旋转
-
-<iframe width="100%" height="200px"  src="https://blueprintue.com/render/mw-zlw-z/" scrolling="no" allowfullscreen></iframe>
-
-## 终极方案
-
-DataAsset比Obj继承好的地方：可以编辑器实时编辑。修改父类数据后不用重新保存引用的蓝图\
-Obj好的地方：可以单独存储函数中的数据、代码逻辑简单清晰、不需要独立Component用于计算
-
-### 代码
-
-```cpp
-void UPawnComp_FPSRotWeaponSway::TickWeaponSway(float DeltaSeconds, const FRotator& ControlRotation, bool bHasInput,  
-                                                ESwayState NewState)  
-{  
-    if (DeltaSeconds <= 0.f) return;  
-    LocalTime += DeltaSeconds;  
-  
-  
-    // State transitions  
-    if (NewState != CurrentState)  
-    {       CurrentState = NewState;  
-       StateStartTime = LocalTime;  
-    }  
-  
-    FSwayParams const& Params = GetParamsForState(CurrentState);  
-  
-  
-    // 1) delta rot  
-    FRotator deltaRot = UKismetMathLibrary::NormalizedDeltaRotator(ControlRotation, LastControlRot);  
-    LastControlRot = ControlRotation;  
-  
-  
-    // 2) rot speed (deg/s) and smoothing  
-    FVector2D rotSpeedFrame(deltaRot.Yaw / DeltaSeconds, deltaRot.Pitch / DeltaSeconds);  
-    // low-pass smoothing  
-    float alpha = FMath::Clamp(DeltaSeconds * 10.f, 0.f, 1.f);  
-    RotSpeedFiltered.X = FMath::Lerp(RotSpeedFiltered.X, rotSpeedFrame.X, alpha);  
-    RotSpeedFiltered.Y = FMath::Lerp(RotSpeedFiltered.Y, rotSpeedFrame.Y, alpha);  
-    // accel  
-    FVector2D rotAccel((RotSpeedFiltered.X - PrevRotSpeedFiltered.X) / DeltaSeconds,  
-                       (RotSpeedFiltered.Y - PrevRotSpeedFiltered.Y) / DeltaSeconds);  
-    PrevRotSpeedFiltered.X = RotSpeedFiltered.X;  
-    PrevRotSpeedFiltered.Y = RotSpeedFiltered.Y;  
-  
-  
-    // 3) normalize  
-    FVector2D rotSpeedNorm(RotSpeedFiltered.X / Params.FiducialRotSpeed, RotSpeedFiltered.Y / Params.FiducialRotSpeed);  
-    rotSpeedNorm.X = FMath::Clamp(rotSpeedNorm.X, -1.f, 1.f);  
-    rotSpeedNorm.Y = FMath::Clamp(rotSpeedNorm.Y, -1.f, 1.f);  
-  
-  
-    // 4) nonlinear mapping (emphasize higher speeds)  
-    //改为曲线，可以手动选择曲线  
-    auto NonLinear = [](float v) { return FMath::Sign(v) * FMath::Pow(FMath::Abs(v), 1.15f); };  
-    float nx = NonLinear(rotSpeedNorm.X);  
-    float ny = NonLinear(rotSpeedNorm.Y);  
-    // 5) compute translation target  
-    FVector swayOffsetTarget = FVector(  
-       nx * Params.SwayOffsetMulti.X * -1.f,  
-       nx * Params.SwayOffsetMulti.Y,  
-       ny * Params.SwayOffsetMulti.Z  
-    );  
-  
-  
-    // 6) compute rotation target (separate)  
-    FRotator rotTarget = FRotator(  
-       ny * Params.SwayRotMulti.Pitch * -1.f,  
-       nx * Params.SwayRotMulti.Yaw * -1.f,  
-       nx * Params.SwayRotMulti.Roll  
-    );  
-  
-  
-    // 7) lead/lag handling  
-    float lagFactor = FMath::Clamp(Params.LeadLag, -1.f, 1.f);  
-    if (lagFactor > 0.f)  
-    {       // lag via 1st-order low pass  
-       float tau = FMath::Lerp(0.02f, 0.5f, lagFactor);  
-       float k = DeltaSeconds / (tau + DeltaSeconds);  
-       TargetOffsetFiltered = FMath::Lerp(TargetOffsetFiltered, swayOffsetTarget, k);  
-       TargetRotFiltered = FMath::Lerp(TargetRotFiltered, FVector(rotTarget.Pitch, rotTarget.Yaw, rotTarget.Roll), k);  
-       swayOffsetTarget = TargetOffsetFiltered;  
-       rotTarget = FRotator(TargetRotFiltered.X, TargetRotFiltered.Y, TargetRotFiltered.Z);  
-    }    //问题，数值不影响最终效果  
-    else if (lagFactor < 0.f)  
-    {       // small predictive lead using angular accel  
-       float leadAmp = FMath::Abs(lagFactor);  
-       swayOffsetTarget += FVector(rotAccel.X, 0.f, rotAccel.Y) * Params.SwayOffsetMulti * leadAmp * 0.02f;  
-       rotTarget.Pitch += rotAccel.Y * Params.SwayRotMulti.Pitch * leadAmp * 0.01f;  
-    }  
-  
-    // 8) state ramp and idle noise  
-    float stateRamp = ComputeStateRamp(Params);  
-    // if (!bHasInput && FVector2D(rotSpeedNorm).SizeSquared() < 0.01f)  
-    // {    //     FVector noise = GetIdleNoise(LocalTime) * Params.IdleNoiseAmp;    //     swayOffsetTarget += noise * 0.3f * stateRamp;    //     rotTarget += FRotator(noise.Z * Params.IdleNoiseRotAmp * 0.2f, noise.X * Params.IdleNoiseRotAmp * 0.15f,    //                           noise.Y * Params.IdleNoiseRotAmp * 0.25f);    // }  
-  
-    swayOffsetTarget *= stateRamp;  
-    rotTarget = rotTarget * stateRamp;  
-  
-  
-    // 9) position spring interp  
-    SwayOffset = UKismetMathLibrary::VectorSpringInterp(SwayOffset, swayOffsetTarget, PosSpringState,  
-                                                        Params.Pos_Stiffness, Params.Pos_Damping, DeltaSeconds,  
-                                                        Params.Pos_Mass);  
-  
-  
-    // 10) rotation spring interp  
-    SwayRot = RotatorSpringInterp(SwayRot, rotTarget, RotSpringState, Params.Rot_Stiffness, Params.Rot_Damping,  
-                                  DeltaSeconds, Params.Rot_Mass);  
-  
-    // 11) clamp  
-    if (SwayOffset.Size() > Params.MaxOffset) SwayOffset = SwayOffset.GetSafeNormal() * Params.MaxOffset;  
-    SwayRot.Pitch = FMath::Clamp(SwayRot.Pitch, -Params.MaxRot.Pitch, Params.MaxRot.Pitch);  
-    SwayRot.Yaw = FMath::Clamp(SwayRot.Yaw, -Params.MaxRot.Yaw, Params.MaxRot.Yaw);  
-    SwayRot.Roll = FMath::Clamp(SwayRot.Roll, -Params.MaxRot.Roll, Params.MaxRot.Roll);  
-}
-```
-
-### 步骤
-
-#### 1. 计算瞬时角速度
-
-得到当前帧相对上一帧的欧拉角差（通常取 Yaw 和 Pitch），用于计算瞬时角速度（deg/s）。
-
-```cpp
-FRotator deltaRot = UKismetMathLibrary::NormalizedDeltaRotator(ControlRotation, LastControlRot);  
-LastControlRot = ControlRotation;
-```
-
-NormalizedDeltaRotator: 将差异角度控制在\[-180, 180]之间
-
-#### 2. 低通滤波 / 平滑角速度/加速度（RotSpeedFiltered）
-
-对每帧测得的角速度做指数平滑（低通），去掉抖动 / 鼠标抖动(0.1s内)造成的高频噪声。
-
-```cpp
-FVector2D rotSpeedFrame(deltaRot.Yaw / DeltaSeconds, deltaRot.Pitch / DeltaSeconds);  
-  
-// low-pass smoothing  
-float alpha = FMath::Clamp(DeltaSeconds, 0.f, .1f);
-RotSpeedFiltered.X = FMath::Lerp(RotSpeedFiltered.X, rotSpeedFrame.X, alpha);  
-RotSpeedFiltered.Y = FMath::Lerp(RotSpeedFiltered.Y, rotSpeedFrame.Y, alpha);  
-  
-// accel  
-FVector2D rotAccel((RotSpeedFiltered.X - PrevRotSpeedFiltered.X) / DeltaSeconds,  
-                   (RotSpeedFiltered.Y - PrevRotSpeedFiltered.Y) / DeltaSeconds);  
-PrevRotSpeedFiltered = RotSpeedFiltered;  
-```
-
-#### 3. 归一化角速度（fiducialRotSpeed）
-
-把角速度映射到 \[-1,1] 范围,玩家鼠标灵敏度差异很大，归一化允许统一调参（例如把 180°/s 视为“满值”）
-
-```cpp
-FVector2D rotSpeedNorm(RotSpeedFiltered.X / Params.FiducialRotSpeed, RotSpeedFiltered.Y / Params.FiducialRotSpeed);  
-rotSpeedNorm.X = FMath::Clamp(rotSpeedNorm.X, -1.f, 1.f);  
-rotSpeedNorm.Y = FMath::Clamp(rotSpeedNorm.Y, -1.f, 1.f);
-```
-
-FiducialRotSpeed: 每秒转速，可以设为1440，4圈
-
-#### 4. 非线性映射（例如 pow/sign）
-
-把归一化速度做非线性压缩或放大（低速更线性/柔和、高速更敏感），用来塑造手感曲线。微小头部移动只想要极小响应，而大幅快速转头希望响应更加明显。非线性函数（如 pow）能实现这种“阈值感”。
-
-```cpp
-auto NonLinear = [](float v) { return FMath::Sign(v) * FMath::Pow(FMath::Abs(v), 1.15f); };  
-float nx = NonLinear(rotSpeedNorm.X);  
-float ny = NonLinear(rotSpeedNorm.Y);
-```
-
-NonLinear:可以换成曲线映射\[0,1]\
-Pow: 可以调更高或设置为参数
-
-#### 5. 计算目标偏移与旋转（swayOffsetTarget / rotTarget）
-
-在真实枪械中，Pitch、Roll、Yaw 的来源与幅度不同（例如 yaw 小，roll 明显），把它们分开能分别调节惯性与幅度。
-
-```cpp
-// 5) compute translation target  
-FVector swayOffsetTarget = FVector(  
-    nx * Params.SwayOffsetMulti.X * -1.f,  
-    nx * Params.SwayOffsetMulti.Y,  
-    ny * Params.SwayOffsetMulti.Z  
-);  
-// 6) compute rotation target (separate)  
-FRotator rotTarget = FRotator(  
-    ny * Params.SwayRotMulti.Pitch * -1.f,  
-    nx * Params.SwayRotMulti.Yaw * -1.f,  
-    nx * Params.SwayRotMulti.Roll  
-);
-```
-
-#### 6. Lead / Lag（滞后或超前）处理
-
-根据 `Params.LeadLag`，做一阶低通（lag）或简单预测（lead）。\
-控制武器对视角的响应是“稍滞后”（更真实/有惯性）还是“略超前”（更敏捷/竞技感）。
-
-* Lag：武器在转动停止后会有尾巴（overshoot + decay） → 更真实但反应稍慢；
-* Lead：能让瞄准看起来更准/快速（适合竞技风格）；
-
-```cpp
-float lagFactor = FMath::Clamp(Params.LeadLag, -1.f, 1.f);  
-if (lagFactor > 0.f)  
-{  
-    // lag via 1st-order low pass  
-    float tau = FMath::Lerp(0.02f, 0.5f, lagFactor);  
-    float k = DeltaSeconds / (tau + DeltaSeconds);  
-    TargetOffsetFiltered = FMath::Lerp(TargetOffsetFiltered, swayOffsetTarget, k);  
-    TargetRotFiltered = FMath::Lerp(TargetRotFiltered, FVector(rotTarget.Pitch, rotTarget.Yaw, rotTarget.Roll), k);  
-    swayOffsetTarget = TargetOffsetFiltered;  
-    rotTarget = FRotator(TargetRotFiltered.X, TargetRotFiltered.Y, TargetRotFiltered.Z);  
-}  
-else if (lagFactor < 0.f)  
-{  
-    // small predictive lead using angular accel  
-    float leadAmp = FMath::Abs(lagFactor);  
-    swayOffsetTarget += FVector(rotAccel.X, 0.f, rotAccel.Y) * Params.SwayOffsetMulti * leadAmp * 0.02f;  
-    rotTarget.Pitch += rotAccel.Y * Params.SwayRotMulti.Pitch * leadAmp * 0.01f;  
-}
-```
-
-#### 8. 状态延迟与 Ramp（StateEntryDelay / StateRampTime）
-
-在状态切换（如进入 ADS）时给出延迟和渐入（例如瞄准后不是瞬间从“跑步晃动”变为“稳态”，而是有个缓慢过渡）。
-
-```cpp
-float stateRamp = ComputeStateRamp(Params);
-swayOffsetTarget *= stateRamp;  
-rotTarget = rotTarget * stateRamp;
-float ComputeStateRamp(const FSwayParams& Params) const  
-{  
-    float Elapsed = FMath::Max(0.f, LocalTime - StateStartTime); 
-    if (Elapsed < Params.StateEntryDelay) return 0.f;  
-    float AfterDelay = Elapsed - Params.StateEntryDelay;  
-    if (Params.StateRampTime <= KINDA_SMALL_NUMBER) return 1.f;  
-    return FMath::Clamp(AfterDelay / Params.StateRampTime, 0.f, 1.f);  
-}
-```
-
-#### 9. 弹簧插值（VectorSpringInterp）
-
-用弹簧阻尼模型使当前位置朝目标平滑过渡，并能表现出惯性、超调（如果阻尼不足）或快速回弹（如果阻尼大）。\
-弹簧模型比简单的 LERP 更接近物理，能自然模拟质量、刚度、阻尼的不同组合，产生丰富的“尾巴/回弹”效果。
-
-```cpp
-SwayOffset = UKismetMathLibrary::VectorSpringInterp(SwayOffset,swayOffsetTarget, PosSpringState, Params.Pos_Stiffness, Params.Pos_Damping, DeltaSeconds,  Params.Pos_Mass);
-SwayRot = RotatorSpringInterp(SwayRot, rotTarget, RotSpringState, Params.Rot_Stiffness, Params.Rot_Damping, DeltaSeconds, Params.Rot_Mass);
-
-```
-
-旋转弹簧插值：社区推荐用自己的弹簧求解[Spring-based Animation and Quaternions](https://toqoz.fyi/springs.html?utm_source=chatgpt.com)
-
-#### 10. 限幅（MaxOffset / MaxPitch/Yaw/Roll）
-
-保护视觉（防止武器飘出画面或产生穿模），并保证在极端输入下效果可控。\
-用户灵敏度、鼠标抖动或跳帧可能造成瞬时超大值，限幅能保护不破坏玩家视觉体验。上述情况都很容易出现
-
-```cpp
-if (SwayOffset.Size() > Params.MaxOffset) SwayOffset = SwayOffset.GetSafeNormal() * Params.MaxOffset;  
-SwayRot.Pitch = FMath::Clamp(SwayRot.Pitch, -Params.MaxRot.Pitch, Params.MaxRot.Pitch);  
-SwayRot.Yaw = FMath::Clamp(SwayRot.Yaw, -Params.MaxRot.Yaw, Params.MaxRot.Yaw);  
-SwayRot.Roll = FMath::Clamp(SwayRot.Roll, -Params.MaxRot.Roll, Params.MaxRot.Roll);
-```
-
-#### ButtStockPivot（Yaw 绕枪托旋转）在 AnimBP 中的实现
-
-AnimBP 中 `Transform (Modify) Bone` 节点对 `ButtStockPivot` 应用 `SwayRot.Yaw`，而 Pitch/Roll 应用在 WeaponBody/root。\
-把绕 Yaw 的旋转枢轴定位在枪托（贴肩处），保证枪托相对稳定，枪口移动最大，符合现实杠杆效果。\
-**为什么**：现实中枪托靠肩为固定支点，绕该点左右偏转时枪口的位移最大；若绕武器根或中心旋转，会让枪显得“漂浮”。
-
-## 未处理的资料
+## 1.4. 未处理的资料
 
 [Weapon sway Solved](https://forums.unrealengine.com/t/weapon-sway-solved/326436)
 
-### GPT建议
+## 1.5. 错误方案
 
-| **你的实现**                                                            | **AAA /研究 /行业参考**                                                                                                                                                                                                                          | **建议 & 调整方向**                                                                                         |
-| ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
-| 使用鼠标转向速度 (deltaRot) 计算转速 → 归一化 → 目标偏移 (swayOffset\_Target) → 弹簧插值恢复 | 真实游戏 /研究中常用弹簧插值 + 惯性 + 超调 + lag/lead                                                                                                                                                                                                       | 保持弹簧插值，但调参数 (Stiffness, Mass, Damping) 来实现 **超调 + 回弹**。考虑你希望武器在停止输入后有“惯性尾巴 (trail)” + 轻微 overshoot。   |
-| 偏移 (swayOffset) 驱动旋转 (swayRot)（简单线性系数映射）                            | AAA 项目中旋转 (pitch / yaw / roll) 往往与速度 +惯性分开处理，有自己的惯性插值                                                                                                                                                                                      | 把旋转 (swayRot) 用自己的弹簧插值 (或类似) 系统，而不是直接从偏移映射。这样旋转也有惯性感觉 (滞后/lead + 回弹)。特别是 roll（武器绕镜转）可以很大程度提升真实感。      |
-| 早期退出逻辑：如果无输入且偏移、旋转近零就不计算                                            | AAA 设计中，他们通常不会完全关掉 sway 恢复 / idle 状态 — 武器在静止时也可能有 /启动 idle sway                                                                                                                                                                            | 改进早退策略：即使无输入，也持续更新直到偏移 & 旋转真正回中性。加入 **idle sway** (微小自然晃动)，而不是硬性归零。                                   |
-| 参数固定 (swayOffsetMulti、旋转倍率、多项弹簧参数)                                  | AAA 游戏通常根据 “武器类型 +玩家姿态 (站/蹲/跑) +附件” 调整 sway 参数 (Vigor 是一个例子)                                                                                                                                                                               | 将你的系统做成 **状态驱动 (state-based)**：不同姿态 (跑 /站 /瞄准 /蹲) 使用不同参数集 (偏移倍率、弹簧刚度、最大转速等)。这样你可以模仿 AAA 级别多样性的武器手感。   |
-| 只用角速度 (转速) 来决定目标偏移                                                  | 研究 /现实中武器响应玩家视角转动时可能有 “leading / lagging” + 超调 + 惯性恢复                                                                                                                                                                                      | 引入 “lead vs lag” 参数：你可以计算目标偏移不仅基于速度，还考虑 “前一帧偏移 (或旋转)” 的惯性趋势 (例如让武器略滞后然后缓慢回弹)，模拟惯性 + 质量感。              |
-| 不考虑 “delay / ramp-up”                                               | CoD 等 AAA 游戏在 ADS 时给 idle sway 加了 **延迟 (delay)** + 逐渐增强 (ramp up)                                                                                                                                                                          | 给你的 swayTarget 或旋转目标引入一个 **启动 delay + 增强曲线**，特别是在进入瞄准 (ADS) 时。这样视觉效果更自然，也更贴近 AAA 设计。                  |
-| 没有限制最大偏移 /旋转 (或你自己 clamp)                                           | AAA 游戏为了避免视觉偏移太过夸张，一般会对摆动幅度 (translation + rotation) 设上限                                                                                                                                                                                   | 明确定义最大偏移和最大旋转 (sway 限值)，防止在高速转向或极端情况时武器 “飞出画面” 或摆动过度。还可以让这些最大值随武器类别 /状态动态变化。                          |
-| 不考虑武器重量 /惯性随武器差异                                                    | 社区 (如 Escape from Tarkov 玩家)经常提到 “武器重量 (mass) 应影响 sway /惯性”。 ([Reddit](https://www.reddit.com/r/EscapefromTarkov/comments/fgohpd?utm_source=chatgpt.com "Weight should directly influence weapon sway"))                                   | 如果你的游戏里有不同武器 (轻步枪、重机枪等)，可以将 **Mass** (弹簧质量) 参数与武器重量 (或重量感) 关联，使 “重武器摇晃慢、惯性大” 这样更真实。                   |
-| 没有加入自然微抖 (noise)                                                    | 社区 /开发者经常使用 Perlin 噪声 / Lissajous 曲线来模拟 idle sway。 r/gamedev 上就有提到。 ([Reddit](https://www.reddit.com/r/gamedev/comments/3m548h/techniques_for_weapon_sway_in_fps/?utm_source=chatgpt.com "Techniques for weapon sway in FPS : r/gamedev")) | 加入 **程序噪声 (Perlin noise) 或 Lissajous 曲线** 来生成 idle 摆动 (手抖 /呼吸效果)，让静止时武器也不死板。结合你弹簧系统做一个混合机制 (惯性 + 噪声)。 |
-
-#### 三、小结 + 推荐下一步
-
-* \[ ] **加入更丰富的动态 (延迟、超调、lead/lag、惯性恢复)**，大幅提升逼真感 /重量感。
-* \[ ] 做 **状态驱动 (state-based)** 参数集 (站、跑、蹲、瞄准) 是非常重要的一步，使武器摆动在不同战况下显得差异化和有“手感层次”。
-* \[ ] 引入 **自然噪声 (Perlin / Lissajous)** 用以 idle 微抖，会让武器看起来更“活”，玩家感觉手持感 +真实感强。
-* \[ ] 参数调节
-
-#### 代码
-
-```cpp
-// Utility: RotatorSpringInterp (实现与 VectorSpringInterp 类似)
-FRotator RotatorSpringInterp(const FRotator& Current, const FRotator& Target, FRotatorSpringState& State, 
-                             float Stiffness, float Damping, float DeltaTime, float Mass)
-{
-    // 这里给出简化数值积分（显式欧拉或 semi-implicit），在工程中你可以用更稳健的求解器
-    FVector cur = FVector(Current.Pitch, Current.Yaw, Current.Roll);
-    FVector targ = FVector(Target.Pitch, Target.Yaw, Target.Roll);
-
-    // velocity stored in State (as FVector)
-    FVector acc = (targ - cur) * Stiffness - State.Velocity * Damping;
-    acc = acc / Mass;
-    State.Velocity += acc * DeltaTime;
-    FVector next = cur + State.Velocity * DeltaTime;
-    return FRotator(next.X, next.Y, next.Z);
-}
-
-// 改良 WeaponSway_Look
-void UUCharacterAnimHelpComp::WeaponSway_Look(
-    FVector& swayOffset, FRotator& swayRot, FVectorSpringState& PosSpringState, FRotatorSpringState& RotSpringState,
-    FRotator& lastControllerRot, float deltaSeconds, const FSwayParams& Params, ESwayState CurrentState,
-    float CurrentTime, bool bHasInput)
-{
-    if (deltaSeconds <= KINDA_SMALL_NUMBER) return;
-
-    // 1) 获取控制旋转并计算 delta
-    FRotator currentControl = GetPawn<APawn>()->GetControlRotation();
-    FRotator deltaRot = UKismetMathLibrary::NormalizedDeltaRotator(currentControl, lastControllerRot);
-    lastControllerRot = currentControl;
-
-    // 2) 角速度 (deg/s) and accel
-    FVector2D rotSpeedFrame(deltaRot.Yaw / deltaSeconds, deltaRot.Pitch / deltaSeconds); // yaw, pitch
-    // 用低通滤波平滑 rotSpeed（成员变量：PrevRotSpeedFiltered）
-    const float alpha = FMath::Clamp( deltaSeconds * 10.f, 0.0f, 1.0f ); // time constant
-    RotSpeedFiltered = FMath::Lerp(RotSpeedFiltered, rotSpeedFrame, alpha); // FVector2D stored
-    FVector2D rotAccel = (RotSpeedFiltered - PrevRotSpeedFiltered) / deltaSeconds;
-    PrevRotSpeedFiltered = RotSpeedFiltered;
-
-    // 3) 归一化速度（参考 fiducial）
-    FVector2D rotSpeedNorm = RotSpeedFiltered / Params.FiducialRotSpeed;
-    rotSpeedNorm.X = FMath::Clamp(rotSpeedNorm.X, -1.f, 1.f);
-    rotSpeedNorm.Y = FMath::Clamp(rotSpeedNorm.Y, -1.f, 1.f);
-
-    // 4) 生成目标偏移（translation）——可以用非线性映射，增加高速度响应
-    // 使用曲线: sign * pow(abs(norm), 1.2) 可以让高转速更敏感
-    auto nonLinear = [](float v){ return FMath::Sign(v) * FMath::Pow(FMath::Abs(v), 1.2f); };
-    float nx = nonLinear(rotSpeedNorm.X), ny = nonLinear(rotSpeedNorm.Y);
-
-    FVector swayOffsetTarget = FVector(
-        nx * Params.SwayOffsetMulti.X * -1.f,       // yaw → lateral opposite
-        nx * Params.SwayOffsetMulti.Y,              // yaw → forward/back small
-        ny * Params.SwayOffsetMulti.Z               // pitch → vertical
-    );
-
-    // 5) 旋转目标（rotation）单独计算（不要从位置直接映射）
-    FRotator rotTarget = FRotator(
-        ny * Params.SwayRotMulti.Pitch * -1.f, // pitch
-        nx * Params.SwayRotMulti.Yaw * -1.f,   // yaw (we'll later apply yaw on shoulder pivot)
-        nx * Params.SwayRotMulti.Roll          // roll, responsive to yaw
-    );
-
-    // 6) 应用 Lead/Lag：对 target 做滞后（exponential）让武器滞后视角
-    // 这里用简单的一阶低通滤波来实现 lag；当 LeadLag < 0 可变成带超前逻辑（更复杂）
-    float lagFactor = FMath::Clamp(Params.LeadLag, -1.f, 1.f);
-    if (lagFactor > 0.f) {
-        // lag amount (0..1)
-        float tau = FMath::Lerp(0.02f, 0.5f, lagFactor); // time constant
-        float k = deltaSeconds / (tau + deltaSeconds);
-        TargetOffsetFiltered = FMath::Lerp(TargetOffsetFiltered, swayOffsetTarget, k);
-        TargetRotFiltered = FMath::Lerp(TargetRotFiltered, FVector(rotTarget.Pitch, rotTarget.Yaw, rotTarget.Roll), k);
-        swayOffsetTarget = TargetOffsetFiltered;
-        rotTarget = FRotator(TargetRotFiltered.X, TargetRotFiltered.Y, TargetRotFiltered.Z);
-    } else if (lagFactor < 0.f) {
-        // light lead: apply small predictive term using rotAccel
-        float leadAmp = FMath::Abs(lagFactor);
-        swayOffsetTarget += FVector(rotAccel.X, 0.f, rotAccel.Y) * Params.SwayOffsetMulti * leadAmp * 0.05f;
-        rotTarget.Pitch += rotAccel.Y * Params.SwayRotMulti.Pitch * leadAmp * 0.02f;
-    }
-
-    // 7) 在没有输入时处理 idle noise & state ramp
-    float stateRamp = ComputeStateRamp(CurrentState, CurrentTime, Params); // returns 0..1 according to delay/rampTime
-    if (!bHasInput && rotSpeedNorm.SizeSquared() < 0.01f) {
-        // Idle noise — 小幅 Perlin 或 Lissajous
-        FVector noise = GetIdleNoise(CurrentTime) * 0.01f; // e.g., returns ~[-1,1]
-        swayOffsetTarget += noise * Params.SwayOffsetMulti * 0.3f * stateRamp;
-        // small rotational noise:
-        rotTarget += FRotator(noise.Z * Params.SwayRotMulti.Pitch * 0.2f, noise.X * Params.SwayRotMulti.Yaw * 0.15f, noise.Y * Params.SwayRotMulti.Roll * 0.25f);
-    }
-
-    swayOffsetTarget *= stateRamp;
-    rotTarget = rotTarget * stateRamp;
-
-    // 8) 弹簧插值（位置）
-    swayOffset = UKismetMathLibrary::VectorSpringInterp(swayOffset, swayOffsetTarget, PosSpringState, Params.Pos_Stiffness, Params.Pos_Damping, deltaSeconds, Params.Pos_Mass);
-
-    // 9) 旋转弹簧插值
-    swayRot = RotatorSpringInterp(swayRot, rotTarget, RotSpringState, Params.Rot_Stiffness, Params.Rot_Damping, deltaSeconds, Params.Rot_Mass);
-
-    // 10) 限幅
-    if (swayOffset.Size() > Params.MaxOffset) {
-        swayOffset = swayOffset.GetSafeNormal() * Params.MaxOffset;
-    }
-    swayRot.Pitch = FMath::Clamp(swayRot.Pitch, -Params.MaxPitch, Params.MaxPitch);
-    swayRot.Yaw   = FMath::Clamp(swayRot.Yaw,   -Params.MaxYaw,   Params.MaxYaw);
-    swayRot.Roll  = FMath::Clamp(swayRot.Roll,  -Params.MaxRoll,  Params.MaxRoll);
-
-    // 11) 注意：Yaw 的最终应用应在 AnimBP 层绕 ShoulderPivot（见下一节）
-}
-
-```
-
-## 被抛弃的方案
-
-### Spring Arm
+### 1.5.1. Spring Arm
 
 > 几乎不可用，但在大量初学者教程中出现
 
 勾选Enable Camera Rotation Lag，使用全身延迟旋转\
 [Weapon Sway in UE4- THE CORRECT WAY | Black Ops Zombies in UE4 #6 - YouTube](https://youtu.be/rZUfkXaVvX4)\
-缺点：不可控，无法限制摆动幅度，并不能真正解决问题\
-Todo: 询问GPT用视频帧分析摄像机抖动要怎么做
+缺点：不可控，无法限制摆动幅度，并不能真正解决问题
 
-# weapon bobbing
+# 2. weapon bobbing
 
-### 基本概念：
+### 零散资料
+
+CoD 等 AAA 游戏在 ADS 时给 idle sway 加了 **延迟 (delay)** + 逐渐增强 (ramp up)
+
+### 2.1.1. 基本概念：
 
 武器摆动是枪支的无意移动，由呼吸和手部不稳引起。可通过屏住呼吸来消除，但会消耗体力，或趴在地上。作为平衡机制，通过增加使用高伤害武器（所有机枪和瞄准武器）所需的技能来发挥作用。仅在第一人称瞄准时使用
 
@@ -1081,15 +850,13 @@ ADS idle sway 并不是立即开始，而是在用户瞄准后有一个 **延迟
 [Dayz的idle sway](https://www.youtube.com/watch?v=gWX-LriRL-c)\
 [战地6冬季攻势和普通动画区别](https://youtube.com/shorts/5jKKFe5g0tI?si=FmZtNGytnfeIAKDH)
 
-# Shoot Sway
+# 3. Shoot Sway
 
 [How I Made My FPS Game Feel Better To Play](https://www.youtube.com/watch?v=SWf9pNdivpo\&t=8s)\
 视频中一开始采用随机晃动让人眩晕，后来采用purlin noise获得平滑的摄像机抖动![](https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/PixPin_2025-11-28_11-02-18.gif)
 
 [自制COD20 优化开火动画](https://www.bilibili.com/video/BV1dRffYjEra)
 
-# 移动摇晃
+# 4. 移动摇晃
 
 [Realistic Headbob Camera Shakes](https://www.youtube.com/watch?v=lwM-SbDKnxQ)
-
-# Idle
