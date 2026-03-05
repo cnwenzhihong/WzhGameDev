@@ -1,8 +1,8 @@
 ---
 created: 2025-11-22T21:19:31+08:00
-modified: 2026-01-05T20:03:10+08:00
-feature: thumbnails/external/e6edcd6b8422c78b3b4b64b340d7848d.png
-thumbnail: thumbnails/resized/37f015824f567075ec9bf12a78536396_b89e22fb.jpg
+modified: 2026-01-12T00:28:59+08:00
+feature: thumbnails/external/28bffd2484a26253ebd451df99a55ab2.png
+thumbnail: thumbnails/resized/82343318e33e845cd5fd43bc6ef2f917_b89e22fb.jpg
 tags:
   - 3C
   - FPS
@@ -20,8 +20,22 @@ halo:
   name: 8a6707a9-8c42-4ee8-a2e0-d247183fe9c3
   publish: false
 date: 2025-11-22T13:19:29.880Z
-lastmod: 2026-01-05T12:04:12.070Z
+lastmod: 2026-01-17T12:43:42.619Z
 ---
+1. 加速度方向不一致
+2. 一般单次滑动最大加速度
+3. 停下：速度方向不会改变
+4. 左右变向时：速度方向改变
+5. 减速滑动时：缓慢归0
+
+我设想了一个思路：\
+当加速度方向和速度方向不一致时判断停止\
+如果速度大于40度每秒，则累加DeceTime。否则直接判定NoInput\
+之后0.3秒内采用Lerp(NoInput、HasInput)，因为减速时间越长越有可能是单纯的减速\
+如果DeceTime>0.3ms，则直接采用HasInput\
+速度方向发生改变时充值DeceTime\
+持续移动时、加速度会在0附近震荡
+
 # 1. 旋转摇晃Weapon Sway
 
 > \[!note]- 资料\
@@ -52,13 +66,13 @@ UE愈加复杂的输入系统让实现不再简单。
 
 > \[!example]- 实现\
 > 0.1秒间隔，无太大必要优化，并未处于deltaSeconds\
-> ![](https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/20251126063200443.png)
+> ![](https://gcore.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/20251126063200443.png)
 
 ##### 旋转差值 ★★★★★
 
 计算`ControllerRotation`的旋转差值\
 可以抹平不同鼠标Dpi的差距，获取差值也简单，需要单独保存上一帧的旋转量\
-![|300](https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/20251216011431739.png)
+![|300](https://gcore.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/20251216011431739.png)
 
 > \[!example]-
 >
@@ -126,10 +140,10 @@ PrevRotSpeedFiltered.Y = RotSpeedFiltered.Y;
 
 > \[!example]- 低通滤波效果对比\
 > 曲线对比：\
-> ![](https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/20251215013753758.png)\
+> ![](https://gcore.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/20251215013753758.png)\
 > 视觉效果：\
-> Normal:\ <video src="https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/NoLowpass.mp4" controls></video>\
-> Lowpass\ <video src="https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/Lowpass.mp4" controls></video>
+> Normal:\ <video src="https://gcore.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/NoLowpass.mp4" controls muted autoplay loop></video>\
+> Lowpass\ <video src="https://gcore.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/Lowpass.mp4" controls muted autoplay loop></video>
 
 ##### 归一化
 
@@ -156,7 +170,7 @@ FVector2D rotSpeedNormalize = FVector2D(FMath::Clamp(tmp_RotSpeed.X, -1, 1), FMa
 需求1-更容易瞄准：小幅度转动时提供更小的视觉变化，大幅度转动时再提升。(> 0)\
 需求2-更灵敏：小幅度转动时(刚动鼠标即可响应)便能有可见的摆动。(< 0)\
 指数函数都能较低成本地实现，也可以改为曲线精准调节\
-![](https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/20251226065943488.png)
+![|425](https://gcore.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/20251226065943488.png)
 
 > \[!example]- 示例
 >
@@ -181,11 +195,11 @@ FVector2D rotSpeedNormalize = FVector2D(FMath::Clamp(tmp_RotSpeed.X, -1, 1), FMa
 >
 > * X → Y
 > * Y → Z\
->   ![](https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/20251226164442511.png)\
+>   ![](https://gcore.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/20251226164442511.png)\
 >   欧拉角也采用UE标准\
->   ![](https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/20251226170200899.png)\
+>   ![](https://gcore.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/20251226170200899.png)\
 >   武器常见的坐标系\
->   ![](https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/20251226182802678.png)
+>   ![](https://gcore.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/20251226182802678.png)
 
 > \[!example]- 代码
 >
@@ -203,7 +217,7 @@ FVector2D rotSpeedNormalize = FVector2D(FMath::Clamp(tmp_RotSpeed.X, -1, 1), FMa
 
 ##### Tips: 左右旋转时加上Pitch值
 
-> \[!tip] 左旋转时，Pitch向下压是一种优秀的效果\ <video src="https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/WeaponSway_PitchAdd.mp4" controls></video>\
+> \[!tip] 左旋转时，Pitch向下压是一种优秀的效果\ <video src="https://gcore.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/WeaponSway_PitchAdd.mp4" controls muted autoplay loop></video>\
 > 理论上我们应将左右、上下旋转做独立的Vector和Rotator映射，而不是直接指定轴。但偷了懒，且目前的参数够用
 
 上文代码中鼠标X移动控制Yaw和Roll旋转，但部分游戏中添加Pitch旋转能进一步增强效果，对其进行补充
@@ -347,7 +361,7 @@ Weapon Sway 每一帧都在更新Target，这会导致：
 > 优点：\
 > ✅ 有惯性 ✅ 速度过渡更自然 ✅ 有回正 ✅ 有重量\
 > 缺点：\
-> 无法准确预估Target
+> 无法准确预估Target、只有Rot没有位移(有需求可以加)
 
 **推力**\
 通过上面获取的输入量(偏移/速度/加速度)，得到一个持续朝运动方向推的力，而不是一个目标点。
@@ -361,7 +375,7 @@ Weapon Sway 每一帧都在更新Target，这会导致：
 > ```
 
 很明显，如果不加以限制，速度(WeaponAngVel)会不断上升\
-![](https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/20260104133021697.png)
+![](https://gcore.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/20260104133021697.png)
 
 **回正力**\
 枪自己想回到中间（回正力），越远力越大\
@@ -374,6 +388,16 @@ Weapon Sway 每一帧都在更新Target，这会导致：
 >
 > ```CPP
 > WeaponAngVel.Pitch += -WeaponRot.Pitch * DeltaSeconds * ForceMulti_HasInput.Pitch * (bHasInput ? 1.f : ForceNoInputRate.Pitch);
+> ```
+
+**阻尼**\
+让枪慢慢停下来， $f(x)=e^x$  x<0时，f(x)<1\
+给Roll的较小的阻尼以便让其有轻微弹性很容易增加质感
+
+> \[!note]- 代码
+>
+> ```CPP
+>  WeaponAngVel *= FMath::Exp(Damp * DeltaSeconds);
 > ```
 
 **强制回正**\
@@ -392,16 +416,7 @@ Weapon Sway 每一帧都在更新Target，这会导致：
 > 假设：\
 > Straighten\_TotalTime=2 Straighten\_NoneLinear=0.3 Straighten\_MinValue=0.3\
 > 如图：\
-> ![](https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/20260105191120670.png)
-
-**阻尼**\
-让枪慢慢停下来， $f(x)=e^x$  x<0时，f(x)<1
-
-> \[!note]- 代码
->
-> ```CPP
->  WeaponAngVel *= FMath::Exp(Damp * DeltaSeconds);
-> ```
+> ![](https://gcore.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/20260105191120670.png)
 
 #### 2.4 方案二：计算位移
 
@@ -441,7 +456,7 @@ SpringInterp这种调参困难方案时的\
 
 有的文章中提到，Yaw轴旋转可以设置为绕枪托旋转效果会更好\
 下图以枪口为轴枢点更方便理解：\
-![](https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/weaponsway_yawpivot.png)
+![](https://gcore.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/weaponsway_yawpivot.png)
 
 > \[!example]- 代码
 >
@@ -494,28 +509,43 @@ SpringInterp这种调参困难方案时的\
 > ```
 
 蓝图使用：\
-![](https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/20251218042239133.png)
+![](https://gcore.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/20251218042239133.png)
 
 > \[!example]- 效果\
-> 枪托为中心(Pivot=(0,-5,0)) <video src="https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/2025-12-18%2005-16-05.mp4" controls></video>\
-> 枪头为中心(Pivot=(0,10,0))<video src="https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/2025-12-18%2005-19-39.mp4" controls></video>
+> 枪托为中心(Pivot=(0,-5,0)) <video src="https://gcore.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/2025-12-18%2005-16-05.mp4" controls muted autoplay loop></video>\
+> 枪头为中心(Pivot=(0,10,0))<video src="https://gcore.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/2025-12-18%2005-19-39.mp4" controls muted autoplay loop></video>
 
 #### 噪声
 
 如果限制最大值，当武器到达最大偏移值时效果便会生硬(不再运动)，此时加入适当的噪声可以大幅度削减该效果，同时增加适当的随机抖动也可以增加一定效果
 
 暂时在Rot中加入柏林噪声\
-![](https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/20260104233131253.png)
+![](https://gcore.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/20260104233131253.png)
+
+#### Add Pitch
+
+有的情况下存在向\
+左旋转时枪身轻微向下的需求，便单独做一个参数控制
+
+> 最好的情况是每个输入轴单独控制完整的Rotator+合并控制Rotator，一共三种控制相加，但配置起来太过麻烦，且还没有如此复杂的需求，暂时搁置。\
+> 即便制作也是单独开新类，减少简单需求的输入量
+
+#### HasInput
+
+有无输入时配置不同的参数\
+资料：\
+[INTERMITTENT CONTROL AS A MODEL OF MOUSE MOVEMENTS](https://arxiv.org/pdf/2103.08558)\
+[ControlTheory,DynamicsandContinuousInteraction](https://www.dcs.gla.ac.uk/~rod/publications/Mur18.pdf)
 
 ### 1.1.4. 应用函数
 
 #### 基本使用
 
 在Tick中使用\
-![](https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/20251218041755810.png)
+![](https://gcore.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/20251218041755810.png)
 
 将计算出的参数用于修改武器IK骨骼即可\
-![](https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/20251218035612026.png)
+![](https://gcore.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/20251218035612026.png)
 
 ## 1.2. 参数配置
 
@@ -531,27 +561,23 @@ SpringInterp这种调参困难方案时的\
 > \[!example]- cod2——Lead，无延迟，沉重、现实且响应及时\
 > [COD2的武器摇摆](https://www.youtube.com/watch?v=kjVSLsz8dCs\&source_ve_path=MTc4NDI0)
 
-> \[!example]- cs2——Lag，少量延迟，停下时立刻追赶上，给人感觉并不拖沓\ <video src="https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/RotSway_CS2.mp4" controls muted autoplay loop></video>
+> \[!example]- cs2——Lag，少量延迟，停下时立刻追赶上，给人感觉并不拖沓\ <video src="https://gcore.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/RotSway_CS2.mp4" controls muted autoplay loop></video>
 
 ### 1.2.2. 核心思路
 
 #### 第三方资料
 
-> \[!quote]+  [CraftingGunFeel.pdf](https://his.diva-portal.org/smash/get/diva2%3A1971715/FULLTEXT01.pdf) 对武器摇晃的讨论
->
-> ##### 受访者对武器摇晃的理解
->
+> \[!quote]+  [CraftingGunFeel.pdf](https://his.diva-portal.org/smash/get/diva2%3A1971715/FULLTEXT01.pdf) 对武器摇晃的讨论\
+> **受访者对武器摇晃的理解**\
 > 向前移动时武器的Pitch会略微向下旋转，而向后走则相反。\
 > 当角色旋转时，枪械可能跟随相机的旋转滞后，也可能领先。在旋转时，如果领先，武器可能向旋转方向滚动；如果滞后，则可能向相反方向滚动。\
 > Cody进一步描述了他对晃动的方法：玩家旋转时武器滞后，然后过冲，最后稳定下来。\
 > 在移动稳定时使用弹簧插值
 >
-> ##### 过冲和滚动Roll的重要性
-
-当枪的枪托命中肩膀时， 它应该在稳定到预定姿势之前稍微过冲一点。在冲击点之后，应该会有2‑4个快速的小幅度左右滚动，同样遵循过冲原则，然后稳定在中间位置。
-
-> ##### 晃动Sway
+> **过冲和滚动Roll的重要性**\
+> 当枪的枪托命中肩膀时， 它应该在稳定到预定姿势之前稍微过冲一点。在冲击点之后，应该会有2‑4个快速的小幅度左右滚动，同样遵循过冲原则，然后稳定在中间位置。
 >
+> **晃动Sway**\
 > 从玩家静止时产生的晃动噪音开始。\
 > 每个旋转轴上的两层柏林噪声形式的噪声由玩家的生命值和当前武器的控制等级驱动。武器的控制等级。这些元素影响静止晃动的振幅和频率，其中控制性较差的武器晃动振幅更大但频率更低。
 >
@@ -563,10 +589,8 @@ SpringInterp这种调参困难方案时的\
 > 武器通常在偏航轴(Yaw)上不能运动太多，如果你必须让武器产生 Yaw 摆动，它必须绕枪托（buttstock）旋转，而不是绕枪的中心点或手部位置。\
 > pitch / roll 也可以部分受这里影响（取决于你想要的风格）
 >
-> > \[!question]- 为什么要这么做：
-> >
-> > ### ◆ 枪在现实中怎么转？
-> >
+> > **为什么要这么做**：\
+> > ◆ 枪在现实中怎么转？\
 > > 当玩家身体左右摇动或做非常轻微的 Yaw 旋转时：
 > >
 > > * 枪托贴在肩膀
@@ -576,8 +600,7 @@ SpringInterp这种调参困难方案时的\
 > > * 枪托最小\
 > >   📌 这就是现实中的**杠杆**效果。
 > >
-> > ### ◆ 如果旋转点错了，会出现什么问题？
-> >
+> > ◆ 如果旋转点错了，会出现什么问题？\
 > > 如果你让武器绕 “weapon root” 或 “枪中心” 旋转：
 > >
 > > * 枪会像“漂浮物”一样左右转
@@ -585,24 +608,21 @@ SpringInterp这种调参困难方案时的\
 > > * 与肩膀没有机械联系
 > > * 视觉上非常假（很多 indie FPS 都犯这个错）
 > >
-> > ### ◆ 这样做后
->
-> ✔ 枪口摆动会被放大\
-> ✔ 枪托稳定，不会乱飞\
-> ✔ 枪看起来像“真枪”，有重量、有支撑点\
-> ✔ 手感立即提升（非常明显）
+> > ◆ 这样做后\
+> > ✔ 枪口摆动会被放大\
+> > ✔ 枪托稳定，不会乱飞\
+> > ✔ 枪看起来像“真枪”，有重量、有支撑点\
+> > ✔ 手感立即提升（非常明显）
 >
 > 在滚转轴上旋转之所以有效，是因为它在不显著影响瞄准方向的情况下增加了不确定感。然而，这在很大程度上取决于特定武器的枢轴点。虽然长武器通常滚动起来感觉良好，但高的武器则不然，因为枪管和瞄准具之间的距离可能会在玩家瞄准时造成不舒服或夸张动作。对此的解决方案很直接——在瞄准时将高武器的枢轴点向上移动。
 >
-> ##### 视图模型过冲的特性
->
+> **视图模型过冲的特性**\
 > 是SCP: 5K的一个显著特性。\
 > 当玩家转向时，视图模型会超过屏幕中心，并在玩家停止旋转时保持向转向方向偏移。与游戏中的大多数程序化运动相反，这被应用于角色绑定的脊柱。这是为了让旋转发生在网格空间中，意味着它相对于角色的根变换而不是骨骼链中更下方的骨骼。\
 > 视图模型过冲不会减少摄像机移动，而是在玩家输入的基础上为视图模型添加额外的移动，并将该移动限制在屏幕的特定区域内。然后根据诸如玩家是否正在瞄准或他们的武器是否有枪托等因素来缩放此效果的振幅。在瞄准射击时， 有托武器如步枪不会出现过冲，而手枪和无托步枪仍然会出现。\
 > 手枪尤其因为其长度短、重量轻且缺乏枪托， 容易抖动和旋转，这使得对准其瞄准具变得困难。虽然VR以外的游戏不模拟双焦瞄准，也不要求玩家像在现实世界中那样对准瞄准具，但SCP: 5K的过冲系统仍然能让游戏传达无托武器缺乏稳定性的特点。然而，为了确保玩家仍能命中他们瞄准的位置，摄像机在瞄准射击时会微妙地自动对准手枪后方，同时仍允许视图模型离开屏幕中心。实现这一点的数学计算相当复杂，由于时间关系在访谈中未深入探讨。但他确实指出，一些玩家可能不喜欢这个过冲特性，可能是因为它引发了晕动症，或者因为相关玩家习惯于主要基于十字准星来定位自己，这就是为什么他的团队决定允许玩家减少或关闭此特性。
 >
-> ##### 美学考量
->
+> **美学考量**\
 > 如果枪械引导移动，这可能会给玩家一种武器操作者技术娴熟或经验丰富的感觉；而如果武器滞后于摄像机，则可能表明相反的情况。晃动插值的各个方面，例如重新居中所需的时间，可以用来强调武器的尺寸或重量。\
 > 一些可用于传达武器特性（如尺寸和重量）的参数包括视图模型过渡到冲刺动画的速度、切换武器的速度、切换到武器后直到可用的时间以及玩家角色瞄准瞄准具的速度。他还引用了后坐力的强度作为可以传达武器威力的一个因素。
 
@@ -654,23 +674,23 @@ n < 1：大角度变化也大，偏向表现效果
 > * UE5 教程1\
 >   https://www.youtube.com/watch?v=rZUfkXaVvX4\
 >   教程中提到，给模型添加的SpringArm的方案效果并不好，因为无法限制他、并且很晃\
->   ![|350](https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/PixPin_2025-11-26_07-20-24.gif)
+>   ![|350](https://gcore.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/PixPin_2025-11-26_07-20-24.gif)
 > * UE5 教程2\
 >   https://www.youtube.com/watch?v=YahaZR6Umxo\
->   ![](https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/PixPin_2025-11-26_07-23-44.gif)
+>   ![](https://gcore.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/PixPin_2025-11-26_07-23-44.gif)
 > * UE5 教程3\
 >   https://www.youtube.com/watch?v=eYsjiw0fXvU\
 >   视频中提到，我们可以反转参数来实现追赶效果。\
->   ![](https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/PixPin_2025-11-27_01-33-44.gif)
+>   ![](https://gcore.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/PixPin_2025-11-27_01-33-44.gif)
 > * UE 实例1\
 >   https://www.youtube.com/watch?v=cpPOA6yKsoo\
->   左右移动时采用roll旋转，鼠标X旋转用较小的Yaw，整体效果非常优秀<video src="https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/PixPin_2025-11-27_17-35-54.mp4" controls autoplay loop></video>
+>   左右移动时采用roll旋转，鼠标X旋转用较小的Yaw，整体效果非常优秀<video src="https://gcore.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/PixPin_2025-11-27_17-35-54.mp4" controls muted autoplay loop></video>
 
 > \[!example]- 追赶：
 >
 > * UE Example\
 >   [Realistic Weapon Sway In UE5](https://www.youtube.com/watch?v=MMvBRQtjFmQ)\
->   ![](https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/PixPin_2025-11-27_01-30-43.gif)
+>   ![](https://gcore.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/PixPin_2025-11-27_01-30-43.gif)
 
 #### Target 锚点(Pivot)
 
@@ -685,7 +705,7 @@ n < 1：大角度变化也大，偏向表现效果
 > \[!example]- UE社区示例\
 > https://forums.unrealengine.com/t/weapon-sway-solved\
 > [TFE Game - Rotation Lag/Leading](https://www.youtube.com/watch?v=6OFmhQ55iJo)\
-> 除了旋转滞后/领先之外，根据滞后/领先值做一些相对位置偏移，效果会好很多。<video src="https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/TFE%20Game%20-%20Rotation%20Lag%E2%A7%B8Leading.mp4" controls autoplay loop></video>
+> 除了旋转滞后/领先之外，根据滞后/领先值做一些相对位置偏移，效果会好很多。<video src="https://gcore.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/TFE%20Game%20-%20Rotation%20Lag%E2%A7%B8Leading.mp4" controls muted autoplay loop></video>
 >
 > ```cpp
 >   void APWNWeapon::UpdateLocRot(FVector newLoc, FRotator newRot, float deltaTime) { 
@@ -717,7 +737,7 @@ https://www.youtube.com/watch?v=u9SuIsd7Dlw
 >
 > * 军团要塞2\
 >   [Weapon Sway in Team Fortress 2 Again](https://www.youtube.com/watch?v=4wPAzutIVpc)\
->   ![](https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/PixPin_2025-11-27_16-40-17.gif)\
+>   ![](https://gcore.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/PixPin_2025-11-27_16-40-17.gif)\
 >   [UFPS - Procedural camera & animation system intro (2012)](https://www.youtube.com/watch?v=Hu0v0kTWH7w)
 
 ##### 围绕手/武器旋转+偏移
@@ -853,7 +873,7 @@ ADS idle sway 并不是立即开始，而是在用户瞄准后有一个 **延迟
 # 3. Shoot Sway
 
 [How I Made My FPS Game Feel Better To Play](https://www.youtube.com/watch?v=SWf9pNdivpo\&t=8s)\
-视频中一开始采用随机晃动让人眩晕，后来采用purlin noise获得平滑的摄像机抖动![](https://cdn.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/PixPin_2025-11-28_11-02-18.gif)
+视频中一开始采用随机晃动让人眩晕，后来采用purlin noise获得平滑的摄像机抖动![](https://gcore.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/PixPin_2025-11-28_11-02-18.gif)
 
 [自制COD20 优化开火动画](https://www.bilibili.com/video/BV1dRffYjEra)
 
