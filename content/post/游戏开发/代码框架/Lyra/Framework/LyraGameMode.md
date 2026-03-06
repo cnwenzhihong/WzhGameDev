@@ -1,29 +1,50 @@
 ---
 created: 2026-02-23T16:19:39+08:00
 modified: 2026-03-04T20:55:42+08:00
-feature: thumbnails/external/eb9a1f0ca8fdde6b17047573f02d7276.png
-thumbnail: thumbnails/resized/642119b49a5f6670dd79c0c9c737cf95_86cf658e.webp
+feature: thumbnails/external/434688f2107c26ebc66bfd5e7ecd6af7.png
+thumbnail: thumbnails/resized/0400c91dabb016cd0b2a25f70f65e876_86cf658e.webp
 tags:
   - blog
 cover: https://pic1.zhimg.com/v2-a75a8fdca2cb1c3ed11f104353ce0940_1440w.jpg
 title: LyraGameMode
 date: 2026-02-23T08:19:37.905Z
-lastmod: 2026-03-05T18:16:37.776Z
+lastmod: 2026-03-06T15:13:38.070Z
 ---
 # 概述
 
-## 初始化流程
+## 核心逻辑
 
-选副本（Experience）→ 加资源（ActionSet + GameFeature）→ 执行动作（Action）→ 玩家出生（RestartPlayer）→ 同步世界状态（GameState）
+1. 更改ModularGamePlay基类
+2. 绝大部分逻辑为加载和配置`ExperienceDefinition`中的所有参数服务\
+   ![](https://gcore.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/20260306223927683.png)
+
+## 关键思路
+
+### Experience加载阶段
+
+| 阶段                           | 作用                                           | 函数                                               |
+| ---------------------------- | -------------------------------------------- | ------------------------------------------------ |
+| start                        | 等待一帧,准备加载                                    | GameMode::initgame                               |
+| match                        | 按优先级找`ExperienceDefinition`                  | GameMode::HandleMatchAssignmentIfNotExpectingOne |
+| set                          | 获得Experience                                 | ExperienceManager::SetCurrentExperience          |
+| **Loading**                  | 按服务器/客户端加载Experience中的Actions ActionSet绑定的资产 | StartExperienceLoad                              |
+| **LoadingGameFeatures**      | 加载GameFeature                                | OnExperienceLoadComplete                         |
+| **LoadingChaosTestingDelay** | Timer延迟测试                                    | OnExperienceFullLoadCompleted                    |
+| **ExecutingActions**         | 执行所有Action的回调函数                              | OnExperienceFullLoadCompleted                    |
+| **Loaded**                   | 按高中低优先级广播完成Delegate                          | OnExperienceFullLoadCompleted                    |
+
+### Gamemode初始化流程
+
+InitGame → 选副本（Experience）→ 加资源（ActionSet + GameFeature）→ 执行动作（Action）→ 玩家出生（RestartPlayer）→ 同步世界状态（GameState）
 
 * **InitGameState**\
-  新增`ULyraExperienceManagerComponent`的加载完成回调，方便加载完成后继续Gameplay逻辑
+  新增`ULyraExperienceManagerComponent`资源加载完成的回调，方便加载完成后开展Gameplay逻辑(RestartPlayer)
 * **InitGame**\
   按优先级查找并初始化Experience，加载资源。
 * **OnExperienceLoaded**\
   Experience资源加载完成之后回调，并执行RestartPlayer相关的逻辑。
 * **RestartPlayer**\
-  引入`ULyraPlayerSpawningManagerComponent`管理PlayerRestart，并接入PawnData用于PlayerRestart
+  引入`ULyraPlayerSpawningManagerComponent`管理PlayerRestart，并接入PawnData
 
 ## 参考资料
 
@@ -86,9 +107,10 @@ lastmod: 2026-03-05T18:16:37.776Z
 >
 > > 顾客意愿(比喻不够准确)：隐藏套餐 > 特色套餐 > 时令套餐 > 活动套餐 > 基础套餐
 
-#### 2️⃣**门店确定点餐**
+#### 2️⃣**门店后厨获得套餐名**
 
-`SetCurrentExperience`\
+`ULyraExperienceManagerComponent::SetCurrentExperience`\
+现在开始由后厨`ULyraExperienceManagerComponent`管理\
 设置套餐为用户所选，后厨开始做菜`StartExperienceLoad`\
 ![](https://pic1.zhimg.com/v2-8e2937f5f173bcd2cf26114620370dc4_1440w.jpg)
 
@@ -144,58 +166,99 @@ lastmod: 2026-03-05T18:16:37.776Z
 > 直接按规则加载Experience自己引用的资产\
 > `TSet<FPrimaryAssetId> PreloadAssetList`： 可以存放除了ActionSet以外的主资产
 
-#### 2️⃣后台准备厨具`GameFeature`加载
+#### 2️⃣后厨准备厨具餐具：`GameFeature`加载
 
-`OnExperienceLoadComplete`加载`GameFeature`
+`OnExperienceLoadComplete`\
+加载`GameFeature` -> 加载完成后调用`OnExperienceFullLoadCompleted`
 
-![](https://gcore.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/20260225164146023.png)
+> 状态标识：`LoadState`=ELyraExperienceLoadState::LoadingGameFeatures\
+> ![](https://gcore.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/20260225164146023.png)
 
 > \[!note]- 检查GameFeature全部加载完成方案：回调+计数器\
 > ![](https://gcore.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/20260225170348507.png)
 
-\--->等待所有`GameFeature`加载完成
+到这里,Experience加载已经完成,后续便是脏代码以及广播完成消息.
+
+***
+
+#### 3️⃣加载延迟测试
+
+`OnExperienceFullLoadCompleted`\
+通过控制台命令参数增加一个Timer延迟
+
+> 状态标识：`LoadState`=ELyraExperienceLoadState::LoadingChaosTestingDelay
+
+```cmd
+  lyra.chaos.ExperienceDelayLoad.MinSecs
+  lyra.chaos.ExperienceDelayLoad.RandomSecs
+```
+
+![](https://gcore.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/20260306192622662.png)
+
+#### 4️⃣检查与善后：执行`GameFeatureAction`
 
 `OnExperienceFullLoadCompleted`
 
-> **ELyraExperienceLoadState::ExecutingActions**
+> 状态标识：`LoadState`= ELyraExperienceLoadState::ExecutingActions
 
-对Experience的所有Action手动执行回调\
+一些零零散散的收尾工作\
+对Experience和ActionSets中的所有Action手动执行`GameFeatureAction`相关回调\
 ![](https://gcore.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/20260225165953409.png)
 
-> LoadState = ELyraExperienceLoadState::Loaded;
+#### 5️⃣告知完成
 
-触发委托Delegate，分高中低。GameMode绑定的回调为中\
+OnExperienceFullLoadCompleted\
+备菜环节全部完成,按优先级,广播厨师取食材/工具\
+所有资源相关的操作都完成,按优先级广播完成的消息
+
+> 状态标识：`LoadState`= ELyraExperienceLoadState::::Loaded;
+
+触发委托Delegate，分高中低。\
 ![](https://pic4.zhimg.com/v2-31b1140b348afaea6f07429da64951c3_1440w.jpg)
 
 > \[!example]- 不同优先级的回调\
-> **High Priority**
+> High Priority
 >
-> * `ULyraTeamCreationComponent`::OnExperienceLoaded\
+> * `ULyraTeamCreationComponent`**队伍**\
 >   组队信息创建，PlayerState会注册到队伍中。
-> * `ULyraFrontendStateComponent`::OnExperienceLoaded\
->   处理带有主菜单界面的Experience Loaded之后的一些处理，主要是打开主菜单界面。\
->   **Normal Priority**
+> * `ULyraFrontendStateComponent`**UI**\
+>   处理带有主菜单界面的Experience Loaded之后的一些处理，主要是打开主菜单界面。
+>
+> **Normal Priority**
+>
+> * ★`ALyraGameMode` **Gameplay**\
+>   调用了GameModeBase::RestartPlayer，开始创建玩家角色。
+> * ★`ALyraPlayerState` **PawnData**\
+>   给PlayerState设置PawnData，为角色初始化GAS。
 > * `UAsyncAction_ExperienceReady`::Step3\_HandleExperienceLoaded\
 >   自定义的异步蓝图方法，用于等待ExperienceLoad后进行一些逻辑。
-> * `ALyraGameMode`::OnExperienceLoaded\
->   主要是调用了GameModeBase::RestartPlayer，创建角色。
-> * `ALyraPlayerState`::OnExperienceLoaded\
->   给PlayerState设置PawnData，为角色初始化GAS。\
->   **Low Priority**
-> * `ULyraBotCreationComponent`::OnExperienceLoaded 顾名思义，创建机器人。\
->   Low Priority
-> * `ULyraBotCreationComponent`::OnExperienceLoaded 顾名思义，创建机器人。
+>
+> **Low Priority**
+>
+> * `ULyraBotCreationComponent`**AI**。
+>
+> **最低,硬编码**\
+> ULyraSettingsLocal 配置和设置\
+> 直接写死在Delegate后面,仅客户端
 
-## 处理RestartPlayer
+## GameMode的`OnExperienceLoaded`
 
-**Experience**初始化后，**GameMode**通过注册的回调函数，接入引擎Gameplay逻辑，开始处理Player\
+在`ExperienceManager`中,我们完成了ExperienceDefinine中`Actions` `ActionSet` `GameFeature`三个变量的加载,只差`PawnData`\
+回到GameMode处理
+
+### 更改`RestartPlayer`时机到`ExperienceLoaded`
+
+**GameMode**通过在`InitGameState`注册的回调函数，在**Experience**资源加载完后，接入引擎Gameplay逻辑,开始RestartPlayer\
 ![](https://pica.zhimg.com/v2-288a776f53e6d3b40f7a3c1ecac41dbe_1440w.jpg)\
-角色重生逻辑移到了：\
-`ULyraPlayerSpawningManagerComponent`：\
-![](https://pica.zhimg.com/v2-e162ce95674f9f38d4ba758f583098ec_1440w.jpg)\
-override必要函数，以传递Lyra的**Pawn**和**PawnData**
+GameMode在Experience完全加载(Loaded)之前无法生成角色\
+![](https://gcore.jsdelivr.net/gh/cnwenzhihong/ImageHosting/ProjectMarkdown/20260306202620598.png)
 
-## PlayerState处理PawnData
+> \[!note]- 角色重生逻辑移到了`ULyraPlayerSpawningManagerComponent`管理:\
+> ![](https://pica.zhimg.com/v2-e162ce95674f9f38d4ba758f583098ec_1440w.jpg)
+
+## PlayerState的`ExperienceLoaded`
+
+处理`PawnData`
 
 `GetPawnDataForController`获取并设置PawnData
 
@@ -203,10 +266,11 @@ override必要函数，以传递Lyra的**Pawn**和**PawnData**
 > PlayerState->Experience\
 > 一般取的是`Experience`的`PawnData`
 
-![](https://pica.zhimg.com/v2-89beabbb8abccebc82c84b287bdcf526_1440w.jpg)
-
 添加`PawnData`中的`AbilitySet`：(ALyraPlayerState::SetPawnData)\
 ![](https://pic2.zhimg.com/v2-602452841a95d5e6990572b6e38b7cd9_1440w.jpg)
+
+> \[!tip]- Gamemode override了必要函数，以传递Lyra的**Pawn**和**PawnData**\
+> ![](https://pica.zhimg.com/v2-89beabbb8abccebc82c84b287bdcf526_1440w.jpg)
 
 # GameState
 
@@ -214,9 +278,9 @@ override必要函数，以传递Lyra的**Pawn**和**PawnData**
 
 帮GameMode和其他组件、系统同步属性/消息
 
-* 服务器帧率`GAverageFPS`属性同步到客户端
-* 提供`ULyraExperienceManagerComponent` 和`ULyraAbilitySystemComponent`
-* 使用`UGameplayMessage`实现了全新的MessageBroadcast系统
+* 将服务器帧率`GAverageFPS`同步到客户端
+* 放置`ExperienceManagerComponent` 和`AbilitySystemComponent`
+* 使用`UGameplayMessage`实现了全新的`MessageBroadcast`系统
 
 ## 客户端同步服务器帧率
 
